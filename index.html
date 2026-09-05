@@ -10,6 +10,7 @@
   <body data-theme="dark">
     <div class="theme-switcher-wrap">
       <button id="themeToggleBtn" class="theme-toggle-btn" type="button" aria-label="Switch theme">White theme</button>
+      <button id="midiModeBtn" class="theme-toggle-btn midi-mode-btn" type="button" aria-haspopup="dialog" aria-expanded="false">MIDI</button>
     </div>
     <div class="app">
       <header class="topbar">
@@ -30,6 +31,77 @@
           <div class="wpm-loader-ring" aria-label="Loading"><span>WPM</span></div>
           <div id="wpmLoaderMessage" class="wpm-loader-message">Scanning modules...</div>
           <pre id="wpmLoaderLogs" class="wpm-loader-logs">Scan log is empty.</pre>
+        </div>
+      </div>
+
+      <div id="midiModeOverlay" class="midi-mode-overlay" aria-hidden="true">
+        <div class="midi-mode-modal" role="dialog" aria-modal="true" aria-labelledby="midiModeTitle">
+          <div class="result-modal-header">
+            <div>
+              <p class="section-kicker">Transport</p>
+              <h3 id="midiModeTitle">MIDI mode</h3>
+            </div>
+            <button id="midiModeCloseBtn" type="button" class="modal-close-btn" aria-label="Close MIDI mode">×</button>
+          </div>
+          <div class="midi-mode-body">
+            <div class="midi-mode-switch-row">
+              <div>
+                <strong>Physical MIDI clock</strong>
+                <p id="midiModeState" class="midi-mode-state">Inactive</p>
+              </div>
+              <button id="midiModeToggleBtn" class="primary-btn midi-mode-toggle" type="button" aria-pressed="false">Enable MIDI</button>
+            </div>
+            <div class="midi-mode-warning">When MIDI mode is active, no other WPM operation is available. Stop MIDI to use presets, scans, Get, Set or Reset.</div>
+            <div class="field midi-tempo-field">
+              <div class="midi-latency-label-row">
+                <label for="midiTempoInput">Tempo reference</label>
+                <span class="midi-tempo-unit">BPM</span>
+              </div>
+              <input id="midiTempoInput" type="number" min="20" max="300" step="0.01" value="120" inputmode="decimal" />
+              <p class="midi-mode-state">The incoming tempo is followed only when it changes by more than 2%.</p>
+            </div>
+            <label class="midi-follow-row" for="midiFollowIncoming">
+              <span>
+                <strong>Follow incoming tempo</strong>
+                <small>Use RTP-MIDI tempo instead of the personal BPM reference.</small>
+              </span>
+              <input id="midiFollowIncoming" type="checkbox" />
+            </label>
+            <label class="midi-follow-row" for="midiFollowPhase">
+              <span>
+                <strong>Follow incoming phase</strong>
+                <small>Align phase from RTP-MIDI without changing the tempo reference.</small>
+              </span>
+              <input id="midiFollowPhase" type="checkbox" checked />
+            </label>
+            <div class="midi-telemetry-grid">
+              <div class="midi-telemetry-item">
+                <span>Estimated incoming tempo</span>
+                <strong id="midiEstimatedTempo">-- BPM</strong>
+              </div>
+              <div class="midi-telemetry-item">
+                <span>Measured phase</span>
+                <strong id="midiEstimatedPhase">-- ms</strong>
+              </div>
+            </div>
+            <div class="field midi-latency-field">
+              <div class="midi-latency-label-row">
+                <label for="midiLatencyRange">Latency compensation</label>
+                <output id="midiLatencyValue" for="midiLatencyRange">-100 ms</output>
+              </div>
+              <input id="midiLatencyRange" type="range" min="-100" max="100" step="1" value="-100" />
+              <div class="midi-latency-scale"><span>-100 ms</span><span>+100 ms</span></div>
+            </div>
+            <div class="field midi-latency-field">
+              <div class="midi-latency-label-row">
+                <label for="midiPhaseRange">Phase correction</label>
+                <output id="midiPhaseValue" for="midiPhaseRange">0 ms</output>
+              </div>
+              <input id="midiPhaseRange" type="range" min="-100" max="100" step="1" value="0" />
+              <div class="midi-latency-scale"><span>-100 ms</span><span>+100 ms</span></div>
+            </div>
+            <p id="midiModeFeedback" class="midi-mode-feedback" aria-live="polite">Ready.</p>
+          </div>
         </div>
       </div>
 
@@ -343,7 +415,7 @@
       const HTTP_REQUEST_TIMEOUT_LARGE = 60000;
       const MAX_JSON_PART_LENGTH = 18000;
       const JSON_DATA_ELEMENT_OVERHEAD = 26;
-      const DATA_TRANSFER_WAIT = 300;
+      const DATA_TRANSFER_WAIT = 500;
       const MKR1000_BASE_URL = 'http://192.168.0.1';
 
 
@@ -390,7 +462,9 @@
       Object.keys(EMPTY_PRESET_LIBRARY).forEach(function (family) {
         const presets = EMPTY_PRESET_LIBRARY[family].presets;
         const addrs = presets.map(function (preset) { return preset.addr; });
-        MODULE_ADDR_LISTS[family] = normalizeCorruptedRegularAddrList(addrs, presets);
+        MODULE_ADDR_LISTS[family] = family === '259e'
+          ? addrs
+          : normalizeCorruptedRegularAddrList(addrs, presets);
       });
 
       // ============================================================================
@@ -422,8 +496,11 @@
         presentModulesOverlayTimer: null,
         pairingOverlayTimer: null,
         pairingRetryTimer: null,
+        midiStatusTimer: null,
         activeAmbiguousChoice: null,
         activePanelId: 'fetchPanel',
+        startupInventoryReady: false,
+        midiActive: false,
         // null = not yet confirmed, true = v2 firmware (sendQuery unsupported), false = confirmed queryable.
         v2Firmware: null
       };
@@ -616,6 +693,169 @@
           // Ignore storage read errors and fall back to the default dark theme.
         }
         applyTheme('dark');
+      }
+
+      function setMidiModeFeedback(message, isError) {
+        const feedback = document.getElementById('midiModeFeedback');
+        if (!feedback) return;
+        feedback.textContent = message;
+        feedback.classList.toggle('is-error', Boolean(isError));
+      }
+
+      function renderMidiMode(active) {
+        state.midiActive = Boolean(active);
+        const stateLabel = document.getElementById('midiModeState');
+        const toggle = document.getElementById('midiModeToggleBtn');
+        if (stateLabel) stateLabel.textContent = state.midiActive ? 'Active' : 'Inactive';
+        if (toggle) {
+          toggle.textContent = state.midiActive ? 'Disable MIDI' : 'Enable MIDI';
+          toggle.setAttribute('aria-pressed', state.midiActive ? 'true' : 'false');
+        }
+        document.body.classList.toggle('midi-mode-active', state.midiActive);
+      }
+
+      function openMidiModeOverlay() {
+        const overlay = document.getElementById('midiModeOverlay');
+        const button = document.getElementById('midiModeBtn');
+        if (!overlay) return;
+        overlay.classList.add('visible');
+        overlay.setAttribute('aria-hidden', 'false');
+        if (button) button.setAttribute('aria-expanded', 'true');
+        fetchMidiStatus();
+        if (state.midiStatusTimer) clearInterval(state.midiStatusTimer);
+        state.midiStatusTimer = setInterval(fetchMidiStatus, 500);
+      }
+
+      function updateMidiTelemetry(status) {
+        const tempo = document.getElementById('midiEstimatedTempo');
+        const phase = document.getElementById('midiEstimatedPhase');
+        if (tempo && Number.isFinite(Number(status.estimated_tempo_bpm))) tempo.textContent = Number(status.estimated_tempo_bpm).toFixed(2) + ' BPM';
+        if (phase && Number.isFinite(Number(status.estimated_phase_us))) phase.textContent = (Number(status.estimated_phase_us) / 1000).toFixed(2) + ' ms';
+      }
+
+      function fetchMidiStatus() {
+        fetch(MKR1000_BASE_URL + '/midiclockstatus')
+          .then(function (response) { if (!response.ok) throw new Error('Status unavailable'); return response.json(); })
+          .then(function (status) {
+            renderMidiMode(status.running);
+            updateMidiTelemetry(status);
+            const followIncoming = document.getElementById('midiFollowIncoming');
+            if (followIncoming && document.activeElement !== followIncoming) followIncoming.checked = status.follow_incoming_tempo === true;
+            const followPhase = document.getElementById('midiFollowPhase');
+            if (followPhase && document.activeElement !== followPhase) followPhase.checked = status.follow_incoming_phase !== false;
+            const tempoInput = document.getElementById('midiTempoInput');
+            if (tempoInput && document.activeElement !== tempoInput && Number.isFinite(Number(status.tempo_set_bpm))) tempoInput.value = Number(status.tempo_set_bpm).toFixed(2);
+            const range = document.getElementById('midiLatencyRange');
+            if (range && Number.isFinite(Number(status.latency_compensation_us))) {
+              range.value = String(Math.max(-100, Math.min(100, Math.round(Number(status.latency_compensation_us) / 1000))));
+              updateMidiLatencyLabel();
+            }
+            const phaseRange = document.getElementById('midiPhaseRange');
+            if (phaseRange && Number.isFinite(Number(status.phase_correction_us))) {
+              phaseRange.value = String(Math.max(-100, Math.min(100, Math.round(Number(status.phase_correction_us) / 1000))));
+              updateMidiPhaseLabel();
+            }
+          })
+          .catch(function () { setMidiModeFeedback('Unable to read MIDI status.', true); });
+      }
+
+      function closeMidiModeOverlay() {
+        const overlay = document.getElementById('midiModeOverlay');
+        const button = document.getElementById('midiModeBtn');
+        if (overlay) {
+          overlay.classList.remove('visible');
+          overlay.setAttribute('aria-hidden', 'true');
+        }
+        if (state.midiStatusTimer) {
+          clearInterval(state.midiStatusTimer);
+          state.midiStatusTimer = null;
+        }
+        if (button) button.setAttribute('aria-expanded', 'false');
+      }
+
+      function updateMidiLatencyLabel() {
+        const range = document.getElementById('midiLatencyRange');
+        const output = document.getElementById('midiLatencyValue');
+        if (range && output) output.value = range.value + ' ms';
+        if (output && range) output.textContent = range.value + ' ms';
+      }
+
+      function setMidiTempo() {
+        const input = document.getElementById('midiTempoInput');
+        if (!input) return;
+        const value = Math.max(20, Math.min(300, Number(input.value) || 120));
+        input.value = value.toFixed(2);
+        setMidiModeFeedback('Applying tempo ' + value.toFixed(2) + ' BPM...');
+        fetch(MKR1000_BASE_URL + '/midiclocktempo?bpm=' + encodeURIComponent(value.toFixed(2)))
+          .then(function (response) { if (!response.ok) throw new Error('Tempo rejected'); return response.text(); })
+          .then(function () { setMidiModeFeedback('Tempo reference set to ' + value.toFixed(2) + ' BPM.'); })
+          .catch(function () { setMidiModeFeedback('Unable to set tempo.', true); });
+      }
+
+      function setMidiFollowIncoming() {
+        const input = document.getElementById('midiFollowIncoming');
+        if (!input) return;
+        const enabled = input.checked;
+        setMidiModeFeedback(enabled ? 'Following incoming tempo after a 2% change.' : 'Using personal tempo reference.');
+        fetch(MKR1000_BASE_URL + '/midiclockfollow?enabled=' + (enabled ? '1' : '0'))
+          .then(function (response) { if (!response.ok) throw new Error('Tempo mode rejected'); return response.text(); })
+          .catch(function () {
+            input.checked = !enabled;
+            setMidiModeFeedback('Unable to change tempo mode.', true);
+          });
+      }
+
+      function setMidiFollowPhase() {
+        const input = document.getElementById('midiFollowPhase');
+        if (!input) return;
+        const enabled = input.checked;
+        setMidiModeFeedback(enabled ? 'Following incoming phase.' : 'Using manual phase correction.');
+        fetch(MKR1000_BASE_URL + '/midiclockphasefollow?enabled=' + (enabled ? '1' : '0'))
+          .then(function (response) { if (!response.ok) throw new Error('Phase mode rejected'); return response.text(); })
+          .catch(function () {
+            input.checked = !enabled;
+            setMidiModeFeedback('Unable to change phase mode.', true);
+          });
+      }
+
+      function setMidiLatency() {
+        const range = document.getElementById('midiLatencyRange');
+        if (!range) return;
+        const value = Math.max(-100, Math.min(100, Number(range.value) || 0));
+        setMidiModeFeedback('Applying ' + value + ' ms latency...');
+        fetch(MKR1000_BASE_URL + '/midiclocklatency?ms=' + value)
+          .then(function (response) { if (!response.ok) throw new Error('Latency rejected'); return response.text(); })
+          .then(function () { setMidiModeFeedback('Latency set to ' + value + ' ms.'); })
+          .catch(function () { setMidiModeFeedback('Unable to set latency.', true); });
+      }
+
+      function updateMidiPhaseLabel() {
+        const range = document.getElementById('midiPhaseRange');
+        const output = document.getElementById('midiPhaseValue');
+        if (range && output) output.textContent = range.value + ' ms';
+      }
+
+      function setMidiPhaseCorrection() {
+        const range = document.getElementById('midiPhaseRange');
+        if (!range) return;
+        const value = Math.max(-100, Math.min(100, Number(range.value) || 0));
+        setMidiModeFeedback('Applying phase correction ' + value + ' ms...');
+        fetch(MKR1000_BASE_URL + '/midiclockphase?ms=' + value)
+          .then(function (response) { if (!response.ok) throw new Error('Phase correction rejected'); return response.text(); })
+          .then(function () { setMidiModeFeedback('Phase correction set to ' + value + ' ms.'); })
+          .catch(function () { setMidiModeFeedback('Unable to set phase correction.', true); });
+      }
+
+      function toggleMidiMode() {
+        const endpoint = state.midiActive ? '/midiclockstop' : '/midiclockstart';
+        setMidiModeFeedback(state.midiActive ? 'Stopping MIDI...' : 'Starting MIDI...');
+        fetch(MKR1000_BASE_URL + endpoint)
+          .then(function (response) { if (!response.ok) throw new Error('MIDI request rejected'); return response.text(); })
+          .then(function () {
+            renderMidiMode(!state.midiActive);
+            setMidiModeFeedback(state.midiActive ? 'MIDI mode active.' : 'MIDI mode stopped.');
+          })
+          .catch(function () { setMidiModeFeedback('Unable to change MIDI mode.', true); });
       }
 
       // Refreshes the full-screen loading overlay's text from the current scan status/debug log.
@@ -937,7 +1177,7 @@
         sendPreparedModuleSet([normalizedPayload], 'sendStatus', function () {
           setModuleCardResetLoadingState(module.value, false);
         });
-        setStatus('sendStatus', 'Reset command sent for ' + (module.label || 'selected module') + '.');
+        setStatus('sendStatus', 'Preparing reset for ' + (module.label || 'selected module') + '...');
       }
 
       // Shared dispatcher for a card's Get/Set/plain-select interactions.
@@ -1065,11 +1305,12 @@
           }
         });
 
-        const fetchActionButtons = document.querySelectorAll('#batchFetchButton, #batchSendButton, #exportCurrentBtn, #fetchButton');
+        const transfersEnabled = enabled && state.startupInventoryReady;
+        const fetchActionButtons = document.querySelectorAll('#batchFetchButton, #batchSendButton, #exportCurrentBtn, #fetchButton, .mini-btn.get, .mini-btn.set, .mini-btn.reset');
         fetchActionButtons.forEach(function (button) {
-          button.disabled = !enabled;
-          button.style.opacity = enabled ? '1' : '0.45';
-          button.style.pointerEvents = enabled ? 'auto' : 'none';
+          button.disabled = !transfersEnabled;
+          button.style.opacity = transfersEnabled ? '1' : '0.45';
+          button.style.pointerEvents = transfersEnabled ? 'auto' : 'none';
         });
 
         document.querySelectorAll('.panel').forEach(function (panel) {
@@ -1558,6 +1799,8 @@
             state.v2Firmware = response.supported === false;
             const addresses = Array.isArray(response.addresses) ? response.addresses : [];
             if (response.supported !== false && response.complete === false && scanAttempt < 180) {
+              state.startupInventoryReady = false;
+              updateCatalogAccessState();
               writeScanDebugState(
                 'Startup inventory',
                 'SCANNING ' + (scanAttempt + 1),
@@ -1569,6 +1812,8 @@
               }, 1000);
               return;
             }
+            state.startupInventoryReady = response.complete === true || response.supported === false;
+            updateCatalogAccessState();
             writeScanDebugState(
               'Startup inventory',
               response.supported === false ? 'UNSUPPORTED' : 'COMPLETE',
@@ -1655,10 +1900,29 @@
             });
           } catch (error) {
             writeScanDebugState('Startup module list', 'PARSE_ERROR', error.message || String(error));
+            const cachedModules = cachedState && Array.isArray(cachedState.modules)
+              ? cachedState.modules
+              : [];
+            if (cachedModules.length) {
+              state.v2Firmware = false;
+              state.startupInventoryReady = true;
+              state.scanResults = cachedModules.slice();
+              state.catalogModules = cachedModules.slice();
+              updateCatalogAccessState();
+              updateCounts();
+              renderScanResults();
+              refreshModuleDisplays();
+              showWpmLoader(false);
+              setStatus('scanStatus', 'Official WPM firmware connected; using ' + cachedModules.length + ' cached module(s).');
+              if (typeof onComplete === 'function') onComplete(cachedModules.slice(), { supported: false, complete: true });
+              return;
+            }
             if (typeof onComplete === 'function') onComplete([], null, error);
           }
         };
         xhr.onerror = xhr.ontimeout = function () {
+          state.startupInventoryReady = false;
+          updateCatalogAccessState();
           writeScanDebugState('Startup module list', 'TIMEOUT/ERROR', 'No response from ' + requestUrl);
           if (typeof onComplete === 'function') onComplete([], null, new Error('No response from ' + requestUrl));
         };
@@ -1865,9 +2129,10 @@
         const RADIUS = 80;
         const labels = new Array(addrs.length).fill(-1);
         labels[0] = data.indexOf(addrs[0]);
+        let lastFoundIndex = labels[0] === -1 ? -1 : 0;
         for (let i = 1; i < addrs.length; i++) {
-          const minStart = labels[i - 1] === -1 ? 0 : labels[i - 1] + addrs[i - 1].length;
-          const prev = parseInt(addrs[i - 1], 16);
+          const minStart = lastFoundIndex === -1 ? 0 : labels[lastFoundIndex] + addrs[lastFoundIndex].length;
+          const prev = parseInt(addrs[lastFoundIndex === -1 ? 0 : lastFoundIndex], 16);
           const cur = parseInt(addrs[i], 16);
           const stepBytes = (cur - prev + 0x10000) % 0x10000;
           const expected = minStart + stepBytes * 2;
@@ -1875,6 +2140,7 @@
           const hi = Math.min(data.length, expected + RADIUS) + addrs[i].length;
           const pos = findClosestOccurrence(data, addrs[i], expected, lo, hi);
           labels[i] = pos === -1 ? data.indexOf(addrs[i], minStart) : pos;
+          if (labels[i] !== -1) lastFoundIndex = i;
         }
         return labels;
       }
@@ -1895,14 +2161,11 @@
         const presets = [];
         for (let i = 0; i < addrs.length; i++) {
           const start = labels[i];
-          if (start === -1) {
-            presets.push({ addr: addrs[i], data: '' });
-            continue;
-          }
+          if (start === -1) continue;
           const dataStart = start + addrs[i].length;
           let end = data.length;
           for (let j = i + 1; j < addrs.length; j++) {
-            if (labels[j] !== -1) { end = labels[j]; break; }
+            if (labels[j] >= dataStart) { end = labels[j]; break; }
           }
           presets.push({ addr: addrs[i], data: data.slice(dataStart, end) });
         }
@@ -2159,6 +2422,10 @@
       // Fetches the preset payload for one module and optionally downloads it.
       // This is the single-module receive flow used by the action buttons in the grids.
       function fetchSingleModule(module, options) {
+        if (!state.startupInventoryReady) {
+          setStatus('result', 'Please wait for the startup module inventory to complete before receiving presets.');
+          return;
+        }
         const moduleAddress = module.value;
         const name = module.label || module.module_name || module.name;
         const settings = Object.assign({
@@ -2229,8 +2496,8 @@
         }
 
         const resolvedModule = fallbackModule || {};
-        const moduleAddress = String(modulePayload.module_address || modulePayload.address || resolvedModule.value || '0x00');
-        const moduleName = String(modulePayload.module_name || modulePayload.name || resolvedModule.label || 'Module');
+        const moduleAddress = String(resolvedModule.value || resolvedModule.module_address || modulePayload.module_address || modulePayload.address || '0x00');
+        const moduleName = String(resolvedModule.label || resolvedModule.module_name || modulePayload.module_name || modulePayload.name || 'Module');
 
         // The module's trusted, continuous addr label grid (every 64 bytes) - resolved once and
         // reused both to parse a raw "data" string and to re-split presets[] below. Falls back to
@@ -2420,7 +2687,8 @@
         presets.forEach((preset) => {
           const chunkLength = preset && preset.data ? preset.data.length : 0;
           const presetBase = (typeof preset.base === 'number') ? preset.base : 0;
-          if (part.length && (presetBase !== partBase || (bytes + (JSON_DATA_ELEMENT_OVERHEAD * (part.length + 1))) > MAX_JSON_PART_LENGTH)) {
+          const projectedSize = bytes + chunkLength + (JSON_DATA_ELEMENT_OVERHEAD * (part.length + 1));
+          if (part.length && (presetBase !== partBase || projectedSize > MAX_JSON_PART_LENGTH)) {
             chunkList.push({ base: partBase, records: part.slice() });
             part = [];
             bytes = 0;
@@ -2861,6 +3129,37 @@
           });
         }
 
+        const midiModeBtn = document.getElementById('midiModeBtn');
+        if (midiModeBtn) midiModeBtn.addEventListener('click', openMidiModeOverlay);
+        const midiModeCloseBtn = document.getElementById('midiModeCloseBtn');
+        if (midiModeCloseBtn) midiModeCloseBtn.addEventListener('click', closeMidiModeOverlay);
+        const midiModeOverlay = document.getElementById('midiModeOverlay');
+        if (midiModeOverlay) {
+          midiModeOverlay.addEventListener('click', function (event) {
+            if (event.target && event.target.id === 'midiModeOverlay') closeMidiModeOverlay();
+          });
+        }
+        const midiModeToggleBtn = document.getElementById('midiModeToggleBtn');
+        if (midiModeToggleBtn) midiModeToggleBtn.addEventListener('click', toggleMidiMode);
+        const midiLatencyRange = document.getElementById('midiLatencyRange');
+        if (midiLatencyRange) {
+          midiLatencyRange.addEventListener('input', updateMidiLatencyLabel);
+          midiLatencyRange.addEventListener('change', setMidiLatency);
+          updateMidiLatencyLabel();
+        }
+        const midiTempoInput = document.getElementById('midiTempoInput');
+        if (midiTempoInput) midiTempoInput.addEventListener('change', setMidiTempo);
+        const midiFollowIncoming = document.getElementById('midiFollowIncoming');
+        if (midiFollowIncoming) midiFollowIncoming.addEventListener('change', setMidiFollowIncoming);
+        const midiFollowPhase = document.getElementById('midiFollowPhase');
+        if (midiFollowPhase) midiFollowPhase.addEventListener('change', setMidiFollowPhase);
+        const midiPhaseRange = document.getElementById('midiPhaseRange');
+        if (midiPhaseRange) {
+          midiPhaseRange.addEventListener('input', updateMidiPhaseLabel);
+          midiPhaseRange.addEventListener('change', setMidiPhaseCorrection);
+          updateMidiPhaseLabel();
+        }
+
         const scanSystemButton = document.getElementById('scanBtn');
         if (scanSystemButton) {
           scanSystemButton.addEventListener('click', queueSystemScan);
@@ -3022,6 +3321,10 @@
         const batchFetchButton = document.getElementById('batchFetchButton');
         if (batchFetchButton) {
           batchFetchButton.addEventListener('click', function () {
+            if (!state.startupInventoryReady) {
+              setStatus('batchFetchStatus', 'Please wait for the startup module inventory to complete before using Get all.');
+              return;
+            }
             const catalogModules = (Array.isArray(state.catalogModules) && state.catalogModules.length
               ? state.catalogModules
               : state.scanResults).filter(function (module) {
@@ -3037,11 +3340,21 @@
             state.batchFetchQueue = catalogModules.slice();
             state.batchFetchResults = [];
             state.batchFetchFailures = [];
+            const deferredRetries = [];
+            const fetchAttempts = new Map();
+            let retryPassStarted = false;
             setBatchButtonLoading(batchFetchButton, true);
             setStatus('batchFetchStatus', 'Batch fetch started for ' + catalogModules.length + ' available modules.');
 
             function nextBatchFetch() {
               if (!state.batchFetchQueue.length) {
+                if (deferredRetries.length && !retryPassStarted) {
+                  retryPassStarted = true;
+                  state.batchFetchQueue = deferredRetries.splice(0);
+                  setStatus('batchFetchStatus', 'Waiting 10 seconds before retrying ' + state.batchFetchQueue.length + ' module(s)...');
+                  setTimeout(nextBatchFetch, 10000);
+                  return;
+                }
                 state.batchFetchMode = false;
                 setBatchButtonLoading(batchFetchButton, false);
                 if (!state.batchFetchResults.length) {
@@ -3060,24 +3373,25 @@
               }
 
               const next = state.batchFetchQueue.shift();
-              const attempt = (next.batchFetchAttempt || 0) + 1;
-              next.batchFetchAttempt = attempt;
+              const moduleKey = String(next.value) + '::' + String(next.label);
+              const attempt = (fetchAttempts.get(moduleKey) || 0) + 1;
+              fetchAttempts.set(moduleKey, attempt);
               state.selectedModule = next;
-              setStatus('batchFetchStatus', 'Fetching ' + next.label + ' (attempt ' + attempt + ' / 3)... remaining: ' + state.batchFetchQueue.length);
+              setStatus('batchFetchStatus', 'Fetching ' + next.label + (attempt > 1 ? ' (final retry)' : '') + '... remaining: ' + state.batchFetchQueue.length);
 
               function continueBatchFetch() {
-                // processQueue releases the previous request after 150 ms; keep only a
-                // small extra gap before scheduling the next module.
-                setTimeout(nextBatchFetch, 175);
+                // Give the module bus time to settle before asking another module to dump
+                // its complete preset memory.
+                setTimeout(nextBatchFetch, 2000);
               }
 
-              function retryOrRecordFailure(message) {
-                if (attempt < 3) {
-                  state.batchFetchQueue.push(next);
-                  setStatus('batchFetchStatus', message + ' Retrying ' + next.label + '.');
+              function recordFailure(message) {
+                if (attempt === 1) {
+                  deferredRetries.push(next);
+                  setStatus('batchFetchStatus', message + ' Deferring one retry for ' + next.label + '.');
                 } else {
                   state.batchFetchFailures.push(next.label);
-                  setStatus('batchFetchStatus', message + ' Giving up on ' + next.label + ' after 3 attempts.');
+                  setStatus('batchFetchStatus', message + ' Skipping ' + next.label + ' after the final retry.');
                 }
                 continueBatchFetch();
               }
@@ -3098,12 +3412,12 @@
                       continueBatchFetch();
                     } catch (error) {
                       done();
-                      retryOrRecordFailure('Error fetching ' + next.label + ': ' + String(error.message || error) + '.');
+                      recordFailure('Error fetching ' + next.label + ': ' + String(error.message || error) + '.');
                     }
                   },
                   function (errorMessage) {
                     done();
-                    retryOrRecordFailure('Fetch failed for ' + next.label + ': ' + errorMessage + '.');
+                    recordFailure('Fetch failed for ' + next.label + ': ' + errorMessage + '.');
                   }
                 );
               });
@@ -3137,6 +3451,10 @@
 
         if (batchSendButton) {
           batchSendButton.addEventListener('click', function () {
+            if (!state.startupInventoryReady) {
+              setStatus('batchSendStatus', 'Please wait for the startup module inventory to complete before using Set all.');
+              return;
+            }
             if (batchPresetFileInput) {
               batchPresetFileInput.value = '';
               batchPresetFileInput.click();
@@ -3219,7 +3537,7 @@
       function pingMKR1000(onConnected) {
         showPairingOverlay('Pinging MKR1000...');
         const xhr = new XMLHttpRequest();
-        const pingUrl = MKR1000_BASE_URL + '/presentmodules?ping=' + Date.now();
+        const pingUrl = MKR1000_BASE_URL + '/midiclockstatus?ping=' + Date.now();
         let settled = false;
         appendPairingLog('Ping started: GET ' + pingUrl);
         function retry() {

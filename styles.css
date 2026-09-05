@@ -67,10 +67,14 @@ body[data-theme="light"] {
 }
 
 .theme-switcher-wrap {
-  max-width: 1420px;
-  margin: 0 auto 16px;
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 3000;
+  margin: 0;
   display: flex;
   justify-content: flex-end;
+  gap: 10px;
 }
 
 .theme-toggle-btn {
@@ -97,6 +101,160 @@ body[data-theme="light"] .theme-toggle-btn {
 .theme-toggle-btn:hover {
   transform: translateY(-1px);
   border-color: var(--line-strong);
+}
+
+.midi-mode-btn {
+  border-color: rgba(144, 208, 168, 0.34);
+  color: var(--success);
+}
+
+body.midi-mode-active .layout {
+  pointer-events: none;
+  opacity: 0.46;
+}
+
+body.midi-mode-active .midi-mode-btn {
+  background: rgba(144, 208, 168, 0.16);
+  border-color: var(--success);
+}
+
+.midi-mode-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: none;
+  place-items: center;
+  padding: 24px;
+  background: rgba(2, 7, 12, 0.76);
+  backdrop-filter: blur(8px);
+}
+
+.midi-mode-overlay.visible {
+  display: grid;
+}
+
+.midi-mode-modal {
+  width: min(520px, 100%);
+  border: 1px solid var(--line-strong);
+  border-radius: 18px;
+  background: linear-gradient(180deg, var(--panel-strong), var(--card));
+  box-shadow: var(--shadow);
+  color: var(--text);
+}
+
+.midi-mode-body {
+  display: grid;
+  gap: 20px;
+  padding: 22px 24px 24px;
+}
+
+.midi-mode-switch-row,
+.midi-latency-label-row,
+.midi-latency-scale {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.midi-mode-switch-row strong {
+  display: block;
+  font-size: 1rem;
+}
+
+.midi-mode-state,
+.midi-mode-feedback {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.midi-mode-feedback.is-error {
+  color: var(--danger);
+}
+
+.midi-mode-warning {
+  padding: 13px 14px;
+  border: 1px solid rgba(244, 213, 137, 0.3);
+  border-radius: 10px;
+  background: rgba(244, 213, 137, 0.08);
+  color: var(--warning);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.midi-telemetry-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.midi-telemetry-item {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(122, 174, 249, 0.06);
+}
+
+.midi-telemetry-item span {
+  color: var(--muted);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.midi-telemetry-item strong {
+  color: var(--blue);
+  font-size: 1.05rem;
+}
+
+.midi-follow-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.midi-follow-row span {
+  display: grid;
+  gap: 5px;
+}
+
+.midi-follow-row small {
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.midi-follow-row input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--blue-strong);
+}
+
+.midi-latency-field {
+  display: grid;
+  gap: 10px;
+}
+
+.midi-latency-label-row output {
+  color: var(--blue);
+  font-weight: 800;
+}
+
+#midiLatencyRange {
+  width: 100%;
+  accent-color: var(--blue-strong);
+}
+
+.midi-latency-scale {
+  color: var(--muted);
+  font-size: 0.72rem;
 }
 
 .external-nav-link {
