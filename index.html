@@ -679,7 +679,8 @@
         if (targetId === 'scanStatus') {
           closeResultModal();
           updateHeaderScanStatus(message || 'Idle');
-          const isScanning = /scan|scanning|running/i.test(String(message || ''));
+          const statusMessage = String(message || '');
+          const isScanning = /still in progress|reading .*inventory|running network diagnostics|^scanning\b|scan started/i.test(statusMessage);
           if (el) el.textContent = message;
           syncWpmLoaderOverlay();
           showWpmLoader(isScanning);
@@ -729,6 +730,18 @@
         anchor.click();
         anchor.remove();
         setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      }
+
+      function exposeBatchDownload(filename, data) {
+        const saveLink = document.getElementById('saveLink');
+        if (!saveLink) return;
+        if (saveLink.dataset.objectUrl) URL.revokeObjectURL(saveLink.dataset.objectUrl);
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        saveLink.href = url;
+        saveLink.download = filename;
+        saveLink.dataset.objectUrl = url;
+        saveLink.classList.remove('hidden');
       }
 
       // Downloads one already-scanned module's cached preset payload (does not re-fetch it).
@@ -1543,14 +1556,24 @@
           try {
             const response = JSON.parse(xhr.responseText || '{}');
             state.v2Firmware = response.supported === false;
+            const addresses = Array.isArray(response.addresses) ? response.addresses : [];
             if (response.supported !== false && response.complete === false && scanAttempt < 180) {
+              writeScanDebugState(
+                'Startup inventory',
+                'SCANNING ' + (scanAttempt + 1),
+                addresses.length + ' detected' + (addresses.length ? ': ' + addresses.join(', ') : '; waiting for module replies')
+              );
               setStatus('scanStatus', 'The MKR1000 startup module scan is still in progress...');
               setTimeout(function () {
                 loadStartupModuleList(onComplete, scanAttempt + 1, showOverlay, cachedState);
               }, 1000);
               return;
             }
-            const addresses = Array.isArray(response.addresses) ? response.addresses : [];
+            writeScanDebugState(
+              'Startup inventory',
+              response.supported === false ? 'UNSUPPORTED' : 'COMPLETE',
+              addresses.length + ' detected' + (addresses.length ? ': ' + addresses.join(', ') : '')
+            );
             const cachedModules = cachedState && Array.isArray(cachedState.modules)
               ? cachedState.modules
               : [];
@@ -1619,6 +1642,7 @@
               if (showOverlay) showPresentModulesOverlay(selectedModules);
               if (response.supported === false) {
                 setStatus('scanStatus', 'The MKR1000 is running v2 firmware; startup query inventory is not supported.');
+                showWpmLoader(false);
               } else if (response.complete === false) {
                 setStatus('scanStatus', 'The MKR1000 startup module scan is still in progress.');
               } else {
@@ -1710,7 +1734,9 @@
         if (!log) return;
 
         const current = String(log.textContent || '').trim();
-        const lines = current ? current.split(/\n/).filter(function (line) { return line && line.trim(); }) : [];
+        const lines = current && current !== 'Scan debug log is empty.'
+          ? current.split(/\n/).filter(function (line) { return line && line.trim(); })
+          : [];
         const nextLines = lines.concat(String(message || '').trim()).slice(-3);
         log.textContent = nextLines.join('\n');
         syncWpmLoaderOverlay();
@@ -3018,13 +3044,18 @@
               if (!state.batchFetchQueue.length) {
                 state.batchFetchMode = false;
                 setBatchButtonLoading(batchFetchButton, false);
-                if (state.batchFetchFailures.length) {
-                  setStatus('batchFetchStatus', 'Batch fetch incomplete. No file was downloaded. Failed modules: ' + state.batchFetchFailures.join(', ') + '.');
+                if (!state.batchFetchResults.length) {
+                  setStatus('batchFetchStatus', 'Batch fetch failed. No preset data was received, so no file was downloaded. Failed modules: ' + state.batchFetchFailures.join(', ') + '.');
                   return;
                 }
-                const payload = { generatedAt: new Date().toISOString(), modules: state.batchFetchResults };
+                const payload = {
+                  generatedAt: new Date().toISOString(),
+                  modules: state.batchFetchResults,
+                  failedModules: state.batchFetchFailures.slice()
+                };
                 setStatus('batchFetchStatus', JSON.stringify(payload, null, 2));
-                exportBackup(payload, 'all-modules-presets.json');
+                exposeBatchDownload('all-modules-presets.json', payload);
+                triggerDownload('all-modules-presets.json', payload);
                 return;
               }
 
@@ -3239,26 +3270,28 @@
       // App bootstrap: rebuilds the catalog UI, restores any cached scan results from a previous
       // session, then refreshes every counter/grid so the page is ready to use on load.
       function initializeApp() {
+        [
+          'wpmLoaderOverlay',
+          'resultModalOverlay',
+          'setUploadModalOverlay',
+          'ambiguousChoiceOverlay',
+          'presentModulesOverlay',
+          'pairingOverlay'
+        ].forEach(function (overlayId) {
+          const overlay = document.getElementById(overlayId);
+          if (overlay && overlay.parentElement !== document.body) document.body.appendChild(overlay);
+        });
         appendPairingLog('Application bootstrap started.');
         applyInitialScanPreviewState();
         const cachedState = loadScannedModuleCache();
-        if (cachedState && cachedState.modules && cachedState.modules.length) {
-          appendPairingLog('Loaded cached module list; skipping MKR1000 inventory request.');
-          buildCatalog();
-          updateCatalogAccessState();
-          updateCounts();
-          renderScanResults();
-          refreshModuleDisplays();
-          return;
-        }
+        buildCatalog();
+        updateCatalogAccessState();
+        updateCounts();
+        renderScanResults();
+        refreshModuleDisplays();
         pingMKR1000(function () {
-          appendPairingLog('No cached module list; loading firmware inventory.');
-          buildCatalog();
-          updateCatalogAccessState();
+          appendPairingLog('Loading fresh firmware inventory.');
           loadStartupModuleList(null, 0, false, cachedState);
-          updateCounts();
-          renderScanResults();
-          refreshModuleDisplays();
         });
       }
 

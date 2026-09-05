@@ -197,6 +197,31 @@ bool usbConnected = false; //Used to throttle activity on USB Host.
 
 int MIDI_EVENT = 0x0800000F; //Leading I2C bytes for 200e MIDI message.
 int DISPLAY_EVENT = 0x0A220013; //Leading I2C bytes for 200e module firmware display message.
+int QUERY_RESPONSE_EVENT = 0x0422001C; //Leading I2C bytes for a module's reply to sendQuery().
+volatile bool query_response_received = false;
+volatile uint8_t query_response_address = 0;
+volatile uint8_t last_queried_address = 0;
+const uint8_t MODULE_SCAN_ADDRESSES[] = {
+  0x10, 0x11, 0x12, 0x13, 0x20, 0x21, 0x23, 0x24, 0x25,
+  0x28, 0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F, 0x30,
+  0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39,
+  0x3A, 0x3B, 0x3C, 0x3D, 0x3E, 0x3F, 0x40, 0x41, 0x42,
+  0x44, 0x45, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E,
+  0x4F, 0x5A, 0x5B, 0x5C, 0x5E, 0x5F, 0x60, 0x63, 0x64, 0x65,
+  0x66, 0x67, 0x68, 0x69, 0x70, 0x72
+};
+const uint8_t MODULE_SCAN_ADDRESS_COUNT = sizeof(MODULE_SCAN_ADDRESSES) / sizeof(MODULE_SCAN_ADDRESSES[0]);
+volatile bool module_present[MODULE_SCAN_ADDRESS_COUNT];
+volatile bool startup_scan_complete = false;
+uint8_t startup_scan_index = 0;
+const uint8_t STARTUP_SCAN_PASS_COUNT = 6;
+uint8_t startup_scan_pass = 0;
+bool startup_scan_waiting = false;
+bool startup_scan_initialized = false;
+bool startup_scan_grace_period = false;
+unsigned long startup_scan_started = 0;
+unsigned long startup_scan_not_before = 0;
+unsigned long startup_scan_finished_at = 0;
 const uint8_t  MIDI_CLK[4]    = {0x0F, 0xF8, 0, 0}; //used to send 252e clock to USB
 const uint8_t  MIDI_CLK_START[4] = {0x0F, 0xFA, 0, 0};
 const uint8_t  MIDI_CLK_CONT[4]  = {0x0F, 0xFB, 0, 0};
@@ -893,6 +918,8 @@ void setup() {
     while (true);
   }
 
+  server.begin();
+
   // wait 10 seconds for connection:
   //delay(10000);
 
@@ -923,6 +950,8 @@ void setup() {
       v2version = true;
   }
 
+  startup_scan_not_before = millis() + 30000;
+
   setupMidiClockTimer();
   stopMidiClockTimer();
 
@@ -947,8 +976,59 @@ void setup() {
 
 }
 
+void scanModulesAtStartup() {
+  if (startup_scan_complete || v2version) return;
+
+  if (!startup_scan_initialized) {
+    for (uint8_t i = 0; i < MODULE_SCAN_ADDRESS_COUNT; i++) module_present[i] = false;
+    startup_scan_initialized = true;
+  }
+
+  if (startup_scan_grace_period) {
+    if (millis() - startup_scan_finished_at < 500) return;
+    startup_scan_complete = true;
+    startup_scan_grace_period = false;
+    return;
+  }
+
+  if (startup_scan_waiting) {
+    if (millis() - startup_scan_started < 100) return;
+    startup_scan_waiting = false;
+    startup_scan_index++;
+    if (startup_scan_index >= MODULE_SCAN_ADDRESS_COUNT) {
+      startup_scan_pass++;
+      if (startup_scan_pass < STARTUP_SCAN_PASS_COUNT) {
+        startup_scan_index = 0;
+        startup_scan_not_before = millis();
+      } else {
+        startup_scan_finished_at = millis();
+        startup_scan_grace_period = true;
+      }
+    }
+    return;
+  }
+
+  if (startup_scan_index >= MODULE_SCAN_ADDRESS_COUNT) {
+    startup_scan_complete = startup_scan_pass >= STARTUP_SCAN_PASS_COUNT;
+    return;
+  }
+  if (millis() < startup_scan_not_before) return;
+
+  if (startup_scan_pass > 0 && module_present[startup_scan_index]) {
+    startup_scan_index++;
+    return;
+  }
+
+  query_response_received = false;
+  query_response_address = 0;
+  last_queried_address = MODULE_SCAN_ADDRESSES[startup_scan_index];
+  sendQuery(last_queried_address);
+  startup_scan_started = millis();
+  startup_scan_waiting = true;
+}
 
 void loop() {
+  scanModulesAtStartup();
   RTP_MIDI.read();
   if (midiClockRunning && (millis() - lastAbletonBeatAt >= ABLETON_CLOCK_TIMEOUT_MS)) {
     processClockMessage(0xFC);
@@ -971,6 +1051,10 @@ void loop() {
       DEBUG_PRINT("Device connected to AP, MAC address: ");
       WiFi.APClientMacAddress(remoteMac);
       printMacAddress(remoteMac);
+      server.begin();
+    } else if (status == WL_AP_LISTENING) {
+      DEBUG_PRINTLN("Access point listening; restarting HTTP server");
+      if (client) client.stop();
       server.begin();
     } else {
       // a device has disconnected from the AP, and we are back in listening mode
@@ -1490,6 +1574,19 @@ void receiveEvent(int howMany) {
             byteCount++;
           } 
           setDisplayMessage(0,moduleVersion);
+        } else if ((command & QUERY_RESPONSE_EVENT) == QUERY_RESPONSE_EVENT) {
+          uint8_t moduleAddr = (command & 0x0000FF00) >> 8;
+          Wire.read();
+          for (uint8_t i = 0; i < MODULE_SCAN_ADDRESS_COUNT; i++) {
+            if (MODULE_SCAN_ADDRESSES[i] == moduleAddr) {
+              module_present[i] = true;
+              break;
+            }
+          }
+          if (moduleAddr == last_queried_address) {
+            query_response_received = true;
+            query_response_address = moduleAddr;
+          }
         }
         Wire.flush();
       }
@@ -2075,7 +2172,7 @@ void writeHeader(WiFiClient client, String statusString, String contentType, int
   // and a content-type so the client knows what's coming, then a blank line:
   client.println(statusString);
   client.println(contentType);
-  client.println("Connection: Keep-Alive");
+  client.println("Connection: close");
   client.println("Pragma: no-cache");
   client.println("Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0");
   client.println("Access-Control-Allow-Origin: *");
@@ -2135,7 +2232,43 @@ void handleWifiRequest(WiFiClient client, String urlString){
   if (urlString.indexOf("/v2") >= 0) {
       v2version = true;
   } 
-  if (urlString.indexOf("/remoteenable") >= 0) {
+  if (urlString.indexOf("/presentmodules") >= 0) {
+    writeHeader(client,"HTTP/1.1 200 OK","Content-type:application/json",0);
+    client.print("{\"complete\":");
+    client.print(startup_scan_complete ? "true" : "false");
+    client.print(",\"supported\":");
+    client.print(v2version ? "false" : "true");
+    client.print(",\"v2\":");
+    client.print(v2version ? "true" : "false");
+    client.print(",\"addresses\":[");
+    bool first_present = true;
+    for (uint8_t i = 0; i < MODULE_SCAN_ADDRESS_COUNT; i++) {
+      if (!module_present[i]) continue;
+      if (!first_present) client.print(",");
+      client.print("\"0x");
+      if (MODULE_SCAN_ADDRESSES[i] < 0x10) client.print("0");
+      client.print(MODULE_SCAN_ADDRESSES[i], HEX);
+      client.print("\"");
+      first_present = false;
+    }
+    client.println("]}");
+  }
+  else if (urlString.indexOf("/queryaddress?addr") >= 0 || urlString.indexOf("/queryscan?addr") >= 0) {
+    writeHeader(client,"HTTP/1.1 200 OK","Content-type:application/json",0);
+    int len = urlString.indexOf(" HTTP");
+    int eqloc = urlString.indexOf('=');
+    int address = (int)strtol(urlString.substring(eqloc + 1, len).c_str(), nullptr, 16);
+    query_response_received = false;
+    query_response_address = 0;
+    last_queried_address = (uint8_t)address;
+    sendQuery(address);
+    unsigned long queryStart = millis();
+    while (!query_response_received && (millis() - queryStart) < 150) {
+    }
+    String result = "{\"address\":\"0x" + String(address,HEX) + "\",\"available\":" + (query_response_received ? "true" : "false") + "}";
+    client.println(result);
+  }
+  else if (urlString.indexOf("/remoteenable") >= 0) {
     writeHeader(client,"HTTP/1.1 200 OK","Content-type:text/plain",0);
     DEBUG_PRINTLN("Remote Enable Received"); 
     sendRemoteEnable();
@@ -2334,7 +2467,7 @@ void handleWifiRequest(WiFiClient client, String urlString){
     //Read data from FRAM cache.
     fram_address=0;
     while (write_counter > fram_address){
-      char hexString[2];
+      char hexString[3];
       sprintf(hexString,"%02x",framRead(fram_address));
       resultString = resultString + String(hexString);
       if (resultString.length() >= line_length){
