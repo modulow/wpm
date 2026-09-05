@@ -1,0 +1,3727 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WPM Interface</title>
+    
+      <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body data-theme="dark">
+    <div class="theme-switcher-wrap">
+      <button id="themeToggleBtn" class="theme-toggle-btn" type="button" aria-label="Switch theme">White theme</button>
+    </div>
+    <div class="app">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">WPM interface</p>
+          <h1>200e Interface</h1>
+        </div>
+        <div class="header-actions">
+          <div class="header-status" aria-live="polite">
+            <div class="wpm-loader-ring" aria-hidden="true"><span>WPM</span></div>
+            <div id="headerScanStatus" class="header-status-text">Idle</div>
+          </div>
+        </div>
+      </header>
+
+      <div id="wpmLoaderOverlay" class="wpm-loader-overlay" aria-hidden="true">
+        <div class="wpm-loader-stack">
+          <div class="wpm-loader-ring" aria-label="Loading"><span>WPM</span></div>
+          <div id="wpmLoaderMessage" class="wpm-loader-message">Scanning modules...</div>
+          <pre id="wpmLoaderLogs" class="wpm-loader-logs">Scan log is empty.</pre>
+        </div>
+      </div>
+
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="nav">
+            <button class="nav-btn" data-target="dashboardPanel">Catalogue</button>
+            <button class="nav-btn" data-target="fetchPanel">My 200e</button>
+            <button class="nav-btn active" data-target="scanPanel">Setup</button>
+          </div>
+        </aside>
+
+        <div id="resultModalOverlay" class="result-modal-overlay" aria-hidden="true">
+          <div class="result-modal" role="dialog" aria-modal="true" aria-labelledby="resultModalTitle">
+            <div class="result-modal-header">
+              <h3 id="resultModalTitle">Result</h3>
+              <button id="resultModalCloseBtn" type="button" class="modal-close-btn" aria-label="Close result">×</button>
+            </div>
+            <pre id="resultModalBody" class="result-modal-body">No result yet.</pre>
+          </div>
+        </div>
+
+        <div id="setUploadModalOverlay" class="set-upload-modal-overlay" aria-hidden="true">
+          <div class="set-upload-modal" role="dialog" aria-modal="true" aria-labelledby="setUploadModalTitle">
+            <div class="result-modal-header">
+              <h3 id="setUploadModalTitle">Set presets</h3>
+              <button id="setUploadCloseBtn" type="button" class="modal-close-btn" aria-label="Close set upload">×</button>
+            </div>
+            <div class="set-upload-body">
+              <div id="setUploadModuleName" class="set-upload-module">No module selected</div>
+              <div class="field">
+                <label for="setUploadFileInput">Preset JSON file</label>
+                <input id="setUploadFileInput" type="file" accept=".json" />
+              </div>
+              <div class="set-upload-actions">
+                <button id="setUploadConfirmBtn" type="button" class="primary-btn">Upload preset</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="ambiguousChoiceOverlay" class="ambiguous-choice-overlay" aria-hidden="true">
+          <div class="ambiguous-choice-modal" role="dialog" aria-modal="true" aria-labelledby="ambiguousChoiceTitle">
+            <div class="result-modal-header">
+              <h3 id="ambiguousChoiceTitle">Choose the matching module</h3>
+              <button id="ambiguousChoiceCloseBtn" type="button" class="modal-close-btn" aria-label="Close ambiguous choice">×</button>
+            </div>
+            <div class="ambiguous-choice-body">
+              <div id="ambiguousChoiceSummary" class="set-upload-module">Multiple modules share the same address.</div>
+              <div id="ambiguousChoiceList" class="ambiguous-choice-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="presentModulesOverlay" class="ambiguous-choice-overlay" aria-hidden="true">
+          <div class="ambiguous-choice-modal" role="dialog" aria-modal="true" aria-labelledby="presentModulesTitle">
+            <div class="result-modal-header">
+              <h3 id="presentModulesTitle">Modules present</h3>
+              <button id="presentModulesCloseBtn" type="button" class="modal-close-btn" aria-label="Close present modules">×</button>
+            </div>
+            <div class="ambiguous-choice-body">
+              <div id="presentModulesSummary" class="set-upload-module">Modules detected by the MKR1000.</div>
+              <div id="presentModulesList" class="present-modules-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="pairingOverlay" class="ambiguous-choice-overlay" aria-hidden="true">
+          <div class="ambiguous-choice-modal" role="status" aria-live="polite" aria-labelledby="pairingTitle">
+            <div class="result-modal-header">
+              <h3 id="pairingTitle">WPM connection</h3>
+            </div>
+            <div class="ambiguous-choice-body">
+              <div id="pairingMessage" class="set-upload-module">Pinging MKR1000...</div>
+              <pre id="pairingLogs" class="wpm-loader-logs">Waiting for pairing script...</pre>
+            </div>
+          </div>
+        </div>
+
+        <main class="content">
+          <section id="dashboardPanel" class="panel active">
+            <div class="card intro-card">
+              <div>
+                <p class="section-kicker">Overview</p>
+                <h2>200e Catalogue</h2>
+              </div>
+              <div class="stats-grid">
+                <div class="stat-box">
+                  <span class="stat-label">Modules</span>
+                  <strong id="moduleCount">0</strong>
+                </div>
+                <div class="stat-box">
+                  <span class="stat-label">Available</span>
+                  <strong id="availableCount">0</strong>
+                </div>
+                <div class="stat-box">
+                  <span class="stat-label">Queue</span>
+                  <strong id="queueCount">0</strong>
+                </div>
+              </div>
+            </div>
+
+            <div id="catalogGrid" class="module-grid"></div>
+          </section>
+
+          <section id="fetchPanel" class="panel">
+            <div class="card">
+              <div class="section-head">
+                <div>
+                  <p class="section-kicker">My 200e</p>
+                  <h2 id="fetchPanelTitle">0 modules available</h2>
+                </div>
+              </div>
+
+              <div class="action-row" style="margin-bottom: 12px;">
+                <button id="batchFetchButton" class="primary-btn">Get all modules presets</button>
+                <button id="batchSendButton" class="primary-btn">Set all modules presets</button>
+                <button id="exportCurrentBtn" class="secondary-btn">Export current batch</button>
+              </div>
+              <input id="batchPresetFileInput" type="file" accept=".json" hidden />
+
+              <div class="module-grid compact-grid" id="moduleSelectGrid"></div>
+
+              <div class="field top-gap">
+                <label for="rawFileInput">Raw preset file (optional import)</label>
+                <input id="rawFileInput" type="file" accept=".json,.txt,.raw" />
+              </div>
+
+              <div class="action-row">
+                <button id="fetchButton" class="primary-btn">Receive selected module</button>
+                <button id="clearSelectionBtn" class="secondary-btn" type="button">Clear selection</button>
+                <a id="saveLink" class="download-link secondary-btn hidden" download="module-presets.json">Download JSON</a>
+              </div>
+
+              <pre id="result">Ready. Select a module or scan the system.</pre>
+
+              <footer class="panel-footer-status">
+                <pre id="batchFetchStatus">Batch fetch is idle.</pre>
+                <pre id="batchSendStatus">Batch send is idle.</pre>
+              </footer>
+            </div>
+          </section>
+
+          <section id="sendPanel" class="panel">
+            <div class="card">
+              <div class="section-head">
+                <div>
+                  <p class="section-kicker">Set presets</p>
+                  <h2>Send to one module</h2>
+                </div>
+              </div>
+
+              <div class="module-grid compact-grid" id="sendSelectGrid"></div>
+
+              <div class="field top-gap">
+                <label for="presetFileInput">Preset JSON file</label>
+                <input id="presetFileInput" type="file" accept=".json" />
+              </div>
+
+              <div class="action-row">
+                <button id="sendButton" class="primary-btn">Send to selected module</button>
+              </div>
+
+              <pre id="sendStatus">No transfer in progress.</pre>
+            </div>
+          </section>
+
+
+          <section id="scanPanel" class="panel">
+            <div class="card">
+              <div class="section-head">
+                <div>
+                  <p class="section-kicker">Setup</p>
+                  <h2>Available modules</h2>
+                </div>
+              </div>
+              <div id="scanEmptyActions" class="scan-empty-actions">
+                <button id="scanBtn" class="primary-btn">Scan modules</button>
+                <button id="scanDiagnosticBtn" class="secondary-btn">Network check</button>
+                <button id="clearCacheBtn" class="secondary-btn">Clear cache</button>
+                <button id="writeFirmwareBtn" class="secondary-btn">Write Firmware</button>
+                <button id="openSetupBtn" class="secondary-btn">Setup</button>
+              </div>
+              <div id="scanGrid" class="module-grid scan-grid"></div>
+              <pre id="scanStatus">No scan has been run yet.</pre>
+              <pre id="scanDebugLog">Scan debug log is empty.</pre>
+            </div>
+          </section>
+
+          <section id="writeFirmwarePanel" class="panel">
+            <div class="card">
+              <div class="section-head">
+                <div>
+                  <p class="section-kicker">Firmware</p>
+                  <h2>Send Firmware to Preset Manager</h2>
+                </div>
+              </div>
+              <div class="action-row" style="margin-bottom: 12px;">
+                <button id="wfBrowseBtn" class="primary-btn" type="button">Browse for hex file</button>
+                <button id="wfBackBtn" class="secondary-btn" type="button">Back to scan</button>
+              </div>
+              <input id="wfFileInput" type="file" accept=".hex" class="hidden" />
+              <pre id="wfText">Select a .hex file to begin.</pre>
+            </div>
+          </section>
+
+          <section id="setupPanel" class="panel">
+            <div class="card">
+              <div class="section-head">
+                <div>
+                  <p class="section-kicker">Setup</p>
+                  <h2>MKR1000 Bridge Setup</h2>
+                </div>
+              </div>
+              <div class="action-row" style="margin-bottom: 12px;">
+                <button id="suSubmitBtn" class="primary-btn" type="button">Submit</button>
+                <button id="suBackBtn" class="secondary-btn" type="button">Back to scan</button>
+              </div>
+              <hr>
+              <table id="suMidiTable">
+                <tr>
+                  <th>Chan</th>
+                  <th>A</th>
+                  <th>B</th>
+                  <th>C</th>
+                  <th>D</th>
+                  <th>Tran</th>
+                  <th>Poly</th>
+                  <th>Velo</th>
+                </tr>
+              </table>
+              <hr>
+              <table id="suBusTable">
+                <tr>
+                  <th>Bus</th>
+                  <th>Fine</th>
+                </tr>
+              </table>
+              <hr>
+              <table id="suMidiOptions">
+                <tr>
+                  <th colspan="2">MIDI Options</th>
+                </tr>
+                <tr>
+                  <td><label for="suPrgChEnbl">Receive Program Change</label></td>
+                  <td><input type="checkbox" id="suPrgChEnbl" name="suPrgChEnbl"></td>
+                </tr>
+                <tr>
+                  <td><label for="suSendMidi" id="suSendMidiLabel">Send 252e Midi Clock</label></td>
+                  <td><input type="checkbox" id="suSendMidi" name="suSendMidi"></td>
+                </tr>
+              </table>
+              <hr>
+              <label for="suDevice"><input type="radio" id="suDevice" name="suUsb" value="1"> USB Device</label>
+              <label for="suHost"><input type="radio" id="suHost" name="suUsb" value="0"> USB Host</label>
+              <hr>
+              <input type="checkbox" id="suPoll" name="suPoll">
+              <label for="suPoll">Poll modules on startup</label>
+              <hr>
+              <label for="suSsid">SSID:</label><br>
+              <input type="text" id="suSsid" name="suSsid" maxlength="32" style="width:250px;"><br>
+              <hr>
+              <label for="suPass">Password (eight characters minimum):</label><br>
+              <input type="text" id="suPass" name="suPass" maxlength="63" style="width:250px;"><br>
+              <label for="suPass2">Re-enter Password:</label><br>
+              <input type="text" id="suPass2" name="suPass2" maxlength="63" style="width:250px;"><br>
+              <label id="suErrorText" style="color:red;"></label>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script src="empty_preset_library.js"></script>
+    <script src="module_catalog.js"></script>
+    <script>
+      // This listener must be registered before the main script so syntax errors in it
+      // remain visible in the pairing overlay.
+      window.addEventListener('error', function (event) {
+        const log = document.getElementById('pairingLogs');
+        if (!log) return;
+        log.textContent = '[' + new Date().toLocaleTimeString() + '] Script error: ' + (event.message || 'Unknown script error') + ' at ' + (event.filename || 'inline') + ':' + (event.lineno || '?') + ':' + (event.colno || '?');
+      });
+    </script>
+
+    <script>
+      // Keep startup failures visible when the page is opened without developer tools.
+      window.addEventListener('error', function (event) {
+        const log = document.getElementById('pairingLogs');
+        if (!log) return;
+        log.textContent += '\n[' + new Date().toLocaleTimeString() + '] JavaScript error: ' + (event.message || 'Unknown error');
+      });
+      window.addEventListener('unhandledrejection', function (event) {
+        const log = document.getElementById('pairingLogs');
+        if (!log) return;
+        log.textContent += '\n[' + new Date().toLocaleTimeString() + '] Promise error: ' + String(event.reason || 'Unknown rejection');
+      });
+
+      // ============================================================================
+      // SECTION: CONFIGURATION & CONSTANTS
+      // App-wide constants: MKR1000 network settings, upload chunk-size limits, and
+      // the bundled empty-preset library used by the Reset action.
+      // ============================================================================
+
+      // Core configuration used by the preset manager.
+      // These values define the MKR1000 network behavior and the payload limits used
+      // when sending and receiving presets from the connected device.
+      const HTTP_REQUEST_TIMEOUT = 20000;
+      // 252e's raw dump (30 presets) is far larger than any other module and needs more
+      // time for the MKR1000 to serialize and send over the network.
+      const HTTP_REQUEST_TIMEOUT_LARGE = 60000;
+      const MAX_JSON_PART_LENGTH = 18000;
+      const JSON_DATA_ELEMENT_OVERHEAD = 26;
+      const DATA_TRANSFER_WAIT = 300;
+      const MKR1000_BASE_URL = 'http://192.168.0.1';
+
+
+      // Empty preset payloads used by the Reset action, loaded from the separate
+      // empty_preset_library.js <script src> include (window.EMPTY_PRESET_LIBRARY) instead of
+      // being inlined here - keeps this file readable while still needing no server/fetch, since
+      // browsers load local same-folder <script src> files fine when opened straight from disk.
+      const EMPTY_PRESET_LIBRARY = window.EMPTY_PRESET_LIBRARY || {};
+
+      // Addr landmarks for the generic raw-dump parser below (locateAddrLabels/
+      // splitRawByAddrList), one ordered addr list per module family. Reused straight from
+      // EMPTY_PRESET_LIBRARY above, since that object already holds exactly the data found in
+      // wpm_presets_interface/empty_presets/*.json for each module.
+      function normalizeCorruptedRegularAddrList(addrs, presets) {
+        const values = addrs.map(function (addr) { return parseInt(addr, 16); });
+        if (values.length < 4 || values.some(function (value) { return !Number.isFinite(value); })) return addrs;
+
+        const step = values[1] - values[0];
+        const expectedThird = values[1] + step;
+        if (step <= 0 || values[2] !== expectedThird) return addrs;
+
+        const rawData = presets.map(function (preset) { return String(preset.addr || '') + String(preset.data || ''); }).join('').toLowerCase();
+        const gridGapChars = step * 2 + 4;
+        const radius = Math.max(step * 4, 80);
+        let lastLabelPosition = rawData.indexOf(addrs[0].toLowerCase());
+        let gridLength = lastLabelPosition === -1 ? values.length : 1;
+        for (let index = 1; index < values.length && lastLabelPosition !== -1; index++) {
+          const label = (values[0] + index * step).toString(16).padStart(4, '0');
+          const expected = lastLabelPosition + gridGapChars;
+          const position = findClosestOccurrence(rawData, label, expected, Math.max(lastLabelPosition + 4, expected - radius), expected + radius + 4);
+          if (position === -1) break;
+          lastLabelPosition = position;
+          gridLength++;
+        }
+
+        if (gridLength < 4) return addrs;
+
+        return Array.from({ length: gridLength }, function (_, index) {
+          return (values[0] + index * step).toString(16).padStart(4, '0');
+        });
+      }
+
+      const MODULE_ADDR_LISTS = {};
+      Object.keys(EMPTY_PRESET_LIBRARY).forEach(function (family) {
+        const presets = EMPTY_PRESET_LIBRARY[family].presets;
+        const addrs = presets.map(function (preset) { return preset.addr; });
+        MODULE_ADDR_LISTS[family] = normalizeCorruptedRegularAddrList(addrs, presets);
+      });
+
+      // ============================================================================
+      // SECTION: APPLICATION STATE
+      // The single mutable object holding everything that changes at runtime:
+      // selection, scan results, queue, and UI timers.
+      // ============================================================================
+
+      // Runtime state shared across the interface.
+      // The global object keeps the selected module, taken scan results, and pending
+      // transfer state so all panels and actions stay synchronized.
+      const state = {
+        selectedModule: null,
+        exportData: [],
+        scanResults: [],
+        catalogModules: [],
+        queue: [],
+        busy: false,
+        activeRequest: null,
+        batchFetchMode: false,
+        batchFetchQueue: [],
+        batchFetchResults: [],
+        batchFetchFailures: [],
+        batchSendQueue: [],
+        batchSendTarget: null,
+        batchSendCurrent: null,
+        batchSendOnComplete: null,
+        resultModalTimer: null,
+        presentModulesOverlayTimer: null,
+        pairingOverlayTimer: null,
+        pairingRetryTimer: null,
+        activeAmbiguousChoice: null,
+        activePanelId: 'fetchPanel',
+        // null = not yet confirmed, true = v2 firmware (sendQuery unsupported), false = confirmed queryable.
+        v2Firmware: null
+      };
+
+      // ============================================================================
+      // SECTION: MODULE LABELS & IMAGES
+      // Maps a module's label/value to its catalog image and normalized lookup keys.
+      // ============================================================================
+
+      // Returns the image key associated with a module label.
+      // This helps the UI display the correct module image even when the label is a
+      // human-readable alias like "Studio H CSR (210e)".
+      function normalizeModuleCode(label) {
+        const text = String(label || '').trim();
+        if (!text) return 'generic';
+        const lower = text.toLowerCase();
+        if (lower.indexOf('studio h csr') !== -1) return 'Studio H CSR';
+        if (lower.indexOf('studio h 254e') !== -1) return 'Studio H 254e';
+        if (lower.indexOf('studio h 255e') !== -1) return 'Studio H 255e';
+        if (lower.indexOf('studio h dpo') !== -1) return 'Studio H DPO';
+        if (lower.indexOf('studio h trf') !== -1) return 'Studio H TRF';
+        const exact = Object.keys(IMAGE_MAP).find(key => lower.indexOf(String(key).toLowerCase()) !== -1);
+        return exact || 'generic';
+      }
+
+      // Normalizes a module name so different labels can be matched reliably.
+      // We remove parentheses content, punctuation, and trailing section letters such as
+      // A/B/C so strings like "261e A" and "Studio H DPO (261e) A" map to the same key.
+      function normalizeModuleNameKey(value) {
+        const text = String(value || '').trim().toLowerCase();
+        if (!text) return '';
+        return text
+          .replace(/\s*\([^)]*\)/g, ' ')
+          .replace(/[^a-z0-9]+/g, '')
+          .replace(/(a|b|c|d)$/g, '');
+      }
+
+      // Maps a module label to its lookup key in IMAGE_MAP so the right product photo shows up.
+      function getModuleImage(label) {
+        const hashed = normalizeModuleCode(label);
+        return IMAGE_MAP[hashed] || 'img/56309.b@2x.webp';
+      }
+
+      // ============================================================================
+      // SECTION: OVERLAYS, MODALS, THEME & STATUS DISPLAY
+      // All transient UI surfaces: the ambiguous-choice/present-modules/result popups,
+      // the full-screen loader, dark/light theme, and the shared setStatus() text/modal
+      // dispatcher.
+      // ============================================================================
+
+      // Auto-dismisses the transient result modal a couple seconds after it's shown.
+      function scheduleResultModalClose(delayMs) {
+        if (state.resultModalTimer) {
+          clearTimeout(state.resultModalTimer);
+        }
+        state.resultModalTimer = setTimeout(function () {
+          closeResultModal();
+        }, Number.isFinite(delayMs) ? delayMs : 2000);
+      }
+
+      function closeAmbiguousChoiceOverlay() {
+        // Hides the picker shown when a scanned address matches more than one catalog module.
+        const overlay = document.getElementById('ambiguousChoiceOverlay');
+        if (!overlay) return;
+        overlay.classList.remove('visible');
+        overlay.setAttribute('aria-hidden', 'true');
+
+        // Closing the dialog must never leave a startup scan waiting forever. Fall back to
+        // the first catalog match while preserving the firmware-reported address.
+        if (typeof state.activeAmbiguousChoice === 'function') {
+          const resolveChoice = state.activeAmbiguousChoice;
+          state.activeAmbiguousChoice = null;
+          resolveChoice();
+        }
+      }
+
+      function closePresentModulesOverlay() {
+        if (state.presentModulesOverlayTimer) {
+          clearTimeout(state.presentModulesOverlayTimer);
+          state.presentModulesOverlayTimer = null;
+        }
+        const overlay = document.getElementById('presentModulesOverlay');
+        if (!overlay) return;
+        overlay.classList.remove('visible');
+        overlay.setAttribute('aria-hidden', 'true');
+      }
+
+      function showPresentModulesOverlay(modules) {
+        const overlay = document.getElementById('presentModulesOverlay');
+        const list = document.getElementById('presentModulesList');
+        const summary = document.getElementById('presentModulesSummary');
+        if (!overlay || !list || !summary) return;
+
+        list.innerHTML = '';
+        if (!Array.isArray(modules)) {
+          summary.textContent = 'Loading modules detected by the MKR1000...';
+          overlay.classList.add('visible');
+          overlay.setAttribute('aria-hidden', 'false');
+          return;
+        }
+        modules.forEach(function (module) {
+          const item = document.createElement('div');
+          item.className = 'present-module-card';
+          item.innerHTML = '<img src="' + (module.image || getModuleImage(module.label)) + '" alt="' + (module.label || 'Module') + '" loading="lazy" />';
+          list.appendChild(item);
+        });
+        summary.textContent = modules.length + ' module(s) detected by the MKR1000.';
+        overlay.classList.add('visible');
+        overlay.setAttribute('aria-hidden', 'false');
+        state.presentModulesOverlayTimer = setTimeout(function () {
+          closePresentModulesOverlay();
+        }, 3000);
+      }
+
+      // Shows a picker letting the user choose which module a shared address actually belongs
+      // to (some ALL_MODULES entries share one address), then resumes the scan via onChoose.
+      function showAmbiguousChoiceOverlay(module, options, onChoose) {
+        const overlay = document.getElementById('ambiguousChoiceOverlay');
+        const list = document.getElementById('ambiguousChoiceList');
+        const summary = document.getElementById('ambiguousChoiceSummary');
+        if (!overlay || !list || !summary) return;
+
+        const fallbackOption = options[0];
+        let settled = false;
+        function settleChoice(selectedOption) {
+          if (settled) return;
+          settled = true;
+          state.activeAmbiguousChoice = null;
+          closeAmbiguousChoiceOverlay();
+          if (typeof onChoose === 'function' && selectedOption) onChoose(selectedOption);
+        }
+        state.activeAmbiguousChoice = function () {
+          settleChoice(fallbackOption);
+        };
+
+        showWpmLoader(false);
+        summary.textContent = 'This address is shared by multiple modules: ' + module.value + '.';
+        list.innerHTML = '';
+
+        options.forEach(function (option) {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'ambiguous-choice-card';
+          button.innerHTML = '<img src="' + (option.image || getModuleImage(option.label)) + '" alt="' + (option.label || 'Module') + '" loading="lazy" /><strong>' + (option.label || 'Module') + '</strong><span>' + (option.value || module.value) + '</span>';
+          button.addEventListener('click', function () {
+            settleChoice(option);
+          });
+          list.appendChild(button);
+        });
+
+        overlay.classList.add('visible');
+        overlay.setAttribute('aria-hidden', 'false');
+      }
+
+      // Small always-visible header text reflecting the latest scan status, independent of
+      // which panel is currently active.
+      function updateHeaderScanStatus(message) {
+        const target = document.getElementById('headerScanStatus');
+        if (target) {
+          target.textContent = message || 'Idle';
+        }
+      }
+
+      // Switches the dark/light theme, updates the toggle button's label, and persists the
+      // choice to localStorage so it survives a page reload.
+      function applyTheme(themeName) {
+        const normalized = themeName === 'light' ? 'light' : 'dark';
+        document.body.setAttribute('data-theme', normalized);
+        const button = document.getElementById('themeToggleBtn');
+        if (button) {
+          button.textContent = normalized === 'dark' ? 'White theme' : 'Dark theme';
+          button.setAttribute('aria-label', normalized === 'dark' ? 'Switch to white theme' : 'Switch to dark theme');
+        }
+        try {
+          localStorage.setItem('wpm-theme', normalized);
+        } catch (error) {
+          // Storage may be unavailable; ignore the failure and keep the visual state in memory.
+        }
+      }
+
+      // Restores the previously-saved theme on page load, defaulting to dark if none is stored.
+      function initTheme() {
+        try {
+          const stored = localStorage.getItem('wpm-theme');
+          if (stored === 'light' || stored === 'dark') {
+            applyTheme(stored);
+            return;
+          }
+        } catch (error) {
+          // Ignore storage read errors and fall back to the default dark theme.
+        }
+        applyTheme('dark');
+      }
+
+      // Refreshes the full-screen loading overlay's text from the current scan status/debug log.
+      function syncWpmLoaderOverlay() {
+        const overlay = document.getElementById('wpmLoaderOverlay');
+        const messageEl = document.getElementById('wpmLoaderMessage');
+        const logsEl = document.getElementById('wpmLoaderLogs');
+        const statusEl = document.getElementById('scanStatus');
+        const logEl = document.getElementById('scanDebugLog');
+
+        if (!overlay || !messageEl || !logsEl) return;
+
+        const nextMessage = statusEl && statusEl.textContent ? statusEl.textContent.trim() : 'Scanning modules...';
+        const nextLogs = logEl && logEl.textContent ? logEl.textContent.trim() : 'Scan log is empty.';
+
+        messageEl.textContent = nextMessage || 'Scanning modules...';
+        logsEl.textContent = nextLogs || 'Scan log is empty.';
+      }
+
+      function showWpmLoader(show) {
+        // Toggles the full-screen "scan in progress" overlay used during long-running scans.
+        const overlay = document.getElementById('wpmLoaderOverlay');
+        if (!overlay) return;
+        if (show) {
+          syncWpmLoaderOverlay();
+        }
+        overlay.classList.toggle('visible', !!show);
+        overlay.setAttribute('aria-hidden', String(!show));
+      }
+
+      function openResultModal(title, message, autoCloseMs) {
+        // Shows a transient popup with an operation's result; auto-closes via scheduleResultModalClose().
+        const overlay = document.getElementById('resultModalOverlay');
+        const titleEl = document.getElementById('resultModalTitle');
+        const bodyEl = document.getElementById('resultModalBody');
+        if (!overlay || !titleEl || !bodyEl) return;
+        titleEl.textContent = title || 'Result';
+        bodyEl.textContent = message || 'No result yet.';
+        overlay.classList.add('visible');
+        overlay.setAttribute('aria-hidden', 'false');
+        scheduleResultModalClose(autoCloseMs);
+      }
+
+      function closeResultModal() {
+        const overlay = document.getElementById('resultModalOverlay');
+        if (state.resultModalTimer) {
+          clearTimeout(state.resultModalTimer);
+          state.resultModalTimer = null;
+        }
+        if (!overlay) return;
+        overlay.classList.remove('visible');
+        overlay.setAttribute('aria-hidden', 'true');
+      }
+
+      function setStatus(targetId, message) {
+        // Central status-text setter used everywhere in the app. Behavior differs by target:
+        // 'scanStatus' also updates the header text and toggles the full-screen loader overlay;
+        // result/sendStatus/batch* targets additionally pop up the transient result modal.
+        const el = document.getElementById(targetId);
+        const modalTargets = ['result', 'sendStatus', 'batchFetchStatus', 'batchSendStatus'];
+        if (targetId === 'scanStatus') {
+          closeResultModal();
+          updateHeaderScanStatus(message || 'Idle');
+          const isScanning = /scan|scanning|running/i.test(String(message || ''));
+          if (el) el.textContent = message;
+          syncWpmLoaderOverlay();
+          showWpmLoader(isScanning);
+          return;
+        }
+        if (modalTargets.indexOf(targetId) !== -1) {
+          const label = state.selectedModule && (state.selectedModule.label || state.selectedModule.module_name || state.selectedModule.name)
+            ? state.selectedModule.label || state.selectedModule.module_name || state.selectedModule.name
+            : 'selected module';
+          let title = 'Status';
+          if (targetId === 'result') title = 'Receive ' + label;
+          else if (targetId === 'sendStatus') title = 'Send to ' + label;
+          else if (targetId === 'batchFetchStatus') title = 'Batch receive';
+          else if (targetId === 'batchSendStatus') title = 'Batch send';
+          openResultModal(title, message);
+        }
+        if (el) el.textContent = message;
+      }
+
+      // ============================================================================
+      // SECTION: QUEUE, COUNTERS & DOWNLOADS
+      // Dashboard counters, the serial task queue that keeps fetch/send requests from
+      // overlapping, and file-download helpers.
+      // ============================================================================
+
+      function updateQueueCounter() {
+        const count = state.queue.length + (state.busy ? 1 : 0);
+        document.getElementById('queueCount').textContent = String(count);
+      }
+
+      // Marks scanResults entries that are no longer valid (missing label/not available) so
+      // the catalog and counters never show stale/malformed detections.
+      function sanitizeScanResults() {
+        state.scanResults = Array.isArray(state.scanResults) ? state.scanResults.filter(function (item) {
+          return item && item.available === true && item.label;
+        }) : [];
+      }
+
+      // Saves `data` as a downloadable JSON file via a temporary object URL / anchor click.
+      function triggerDownload(filename, data) {
+        const blob = new Blob([typeof data === 'string' ? data : JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      }
+
+      // Downloads one already-scanned module's cached preset payload (does not re-fetch it).
+      function exportModulePayload(module, filename) {
+        if (!module || !module.payload) {
+          setStatus('scanStatus', 'No valid preset payload available for ' + (module && module.label ? module.label : 'this module') + '.');
+          return;
+        }
+        triggerDownload(filename || (module.label || 'module') + '-presets.json', module.payload);
+      }
+
+      // Formats a millisecond duration as a short human-readable string (e.g. "1.20 s" or "450 ms").
+      function formatScanDuration(ms) {
+        if (!Number.isFinite(ms)) return '0 ms';
+        if (ms >= 1000) {
+          return (ms / 1000).toFixed(2) + ' s';
+        }
+        return Math.round(ms) + ' ms';
+      }
+
+      // Refreshes the dashboard's module/available/queue counters after any scan or cache change.
+      function updateCounts() {
+        sanitizeScanResults();
+        const availableCount = state.scanResults.filter(item => item.available).length;
+        document.getElementById('moduleCount').textContent = String(ALL_MODULES.length);
+        document.getElementById('availableCount').textContent = String(availableCount);
+        updateQueueCounter();
+      }
+
+      // Simple serial task queue (one operation at a time) so overlapping fetch/send requests
+      // don't hit the MKR1000's tiny web server concurrently.
+      function enqueueTask(task) {
+        state.queue.push(task);
+        updateQueueCounter();
+        if (!state.busy) processQueue();
+      }
+
+      // Runs queued tasks one at a time: pulls the next task, waits for it to call its done()
+      // callback, then waits a short delay before starting the next one (see enqueueTask above).
+      function processQueue() {
+        if (!state.queue.length) {
+          state.busy = false;
+          updateQueueCounter();
+          return;
+        }
+
+        state.busy = true;
+        const next = state.queue.shift();
+        updateQueueCounter();
+        next(() => {
+          setTimeout(processQueue, 150);
+        });
+      }
+
+      // ============================================================================
+      // SECTION: MODULE CARD SELECTION & ACTIONS
+      // Get/Set/Reset button handlers for a single module card, selection state, and
+      // per-family empty-preset lookup.
+      // ============================================================================
+
+      // Records which module is currently selected for fetch/send actions and updates the
+      // status text shown on the fetch/send panels accordingly.
+      function assignSelectedModule(module) {
+        state.selectedModule = module;
+        const label = module.label || module.module_name || module.name || module.address || 'Selected module';
+        const resultEl = document.getElementById('result');
+        const sendStatusEl = document.getElementById('sendStatus');
+        if (resultEl) resultEl.textContent = 'Selected: ' + label + '. Ready to fetch.';
+        if (sendStatusEl) sendStatusEl.textContent = 'Selected: ' + label + '. Ready to send.';
+      }
+
+      // Looks up every rendered module card matching a data-module-value attribute. The same
+      // module can be rendered in several grids at once (Receive/Send panels), so every match
+      // must be kept in sync, not just the first one found in DOM order.
+      function findModuleCardsByValue(moduleValue) {
+        if (!moduleValue && moduleValue !== 0) return [];
+        return Array.prototype.slice.call(
+          document.querySelectorAll('[data-module-value="' + String(moduleValue).replace(/"/g, '\\"') + '"]')
+        );
+      }
+
+      // Toggles the loading spinner/disabled state on every card's Get button while a fetch runs.
+      function setModuleCardLoadingState(moduleValue, isLoading) {
+        findModuleCardsByValue(moduleValue).forEach(function (targetCard) {
+          targetCard.classList.toggle('loading', !!isLoading);
+          const targetButton = targetCard.querySelector('.mini-btn.get');
+          if (targetButton) {
+            targetButton.disabled = !!isLoading;
+            targetButton.classList.toggle('is-busy', !!isLoading);
+          }
+        });
+      }
+
+      // Toggles the loading spinner/disabled state on every card's Reset button while a restore runs.
+      function setModuleCardResetLoadingState(moduleValue, isLoading) {
+        findModuleCardsByValue(moduleValue).forEach(function (targetCard) {
+          const targetButton = targetCard.querySelector('.mini-btn.reset');
+          if (targetButton) {
+            targetButton.disabled = !!isLoading;
+            targetButton.classList.toggle('is-busy', !!isLoading);
+          }
+        });
+      }
+
+      // "Get" button handler: fetches and auto-downloads one module's presets in the background.
+      function handleModuleCardGet(module) {
+        if (!module) return;
+        const moduleValue = module.value;
+        setModuleCardLoadingState(moduleValue, true);
+        assignSelectedModule(module);
+        fetchSingleModule(module, {
+          autoDownload: true,
+          showResult: false,
+          onComplete: function () {
+            setModuleCardLoadingState(moduleValue, false);
+          }
+        });
+      }
+
+      // "Set" button handler: opens the upload modal for sending a file to this module.
+      function handleModuleCardSet(module) {
+        if (!module) return;
+        assignSelectedModule(module);
+        selectModuleForSet(module);
+      }
+
+      // Extracts the module family code (e.g. '252e') embedded in a label/value/name string, so
+      // EMPTY_PRESET_LIBRARY entries can be matched regardless of exact label formatting.
+      function getModuleFamilyToken(value) {
+        const text = String(value || '').toLowerCase();
+        const knownFamilies = [
+          '206e', '207e', '210e', '218e', '222e', '223e', '225e', '227e', '230e', '249e',
+          '250e', '251e', '252e', '256e', '257e', '259e', '260e', '261e', '266e', '267e',
+          '272e', '281e', '285e', '291e', '292e', '296e'
+        ];
+
+        for (let i = 0; i < knownFamilies.length; i++) {
+          const family = knownFamilies[i];
+          if (text.indexOf(family) !== -1) {
+            return family;
+          }
+        }
+
+        return '';
+      }
+
+      // Finds the matching EMPTY_PRESET_LIBRARY family key for a module, trying several of its
+      // identity fields in turn (label, value, name, code) since formats vary between call sites.
+      function resolveEmptyPresetFile(module) {
+        if (!module) return null;
+
+        const candidateValues = [
+          module.label,
+          module.module_name,
+          module.name,
+          module.code,
+          module.value,
+          module.value && String(module.value).replace(/^0x/i, ''),
+          module.label && String(module.label).replace(/\s*\([^)]*\)/g, ''),
+          module.label && String(module.label).replace(/\s+/g, '')
+        ].filter(Boolean);
+
+        for (let i = 0; i < candidateValues.length; i++) {
+          const family = getModuleFamilyToken(candidateValues[i]);
+          if (family && EMPTY_PRESET_LIBRARY[family]) {
+            return family;
+          }
+        }
+
+        return null;
+      }
+
+      // "Reset" button handler: uploads the bundled factory-empty preset set for this module's
+      // family, effectively wiping its current presets.
+      function eraseModulePresets(module) {
+        if (!module) return;
+
+        const presetFamilyKey = resolveEmptyPresetFile(module);
+        if (!presetFamilyKey || !EMPTY_PRESET_LIBRARY[presetFamilyKey]) {
+          setStatus('sendStatus', 'No empty preset payload found for ' + (module.label || 'this module') + '.');
+          return;
+        }
+
+        const presetData = EMPTY_PRESET_LIBRARY[presetFamilyKey];
+        const normalizedPayload = normalizeImportedModulePayload(presetData, module);
+        if (!normalizedPayload) {
+          setStatus('sendStatus', 'The empty preset payload is not valid for ' + (module.label || 'this module') + '.');
+          return;
+        }
+
+        assignSelectedModule(module);
+        setModuleCardResetLoadingState(module.value, true);
+        sendPreparedModuleSet([normalizedPayload], 'sendStatus', function () {
+          setModuleCardResetLoadingState(module.value, false);
+        });
+        setStatus('sendStatus', 'Reset command sent for ' + (module.label || 'selected module') + '.');
+      }
+
+      // Shared dispatcher for a card's Get/Set/plain-select interactions.
+      function handleModuleAction(module, mode) {
+        if (!module) return;
+        if (mode === 'get') {
+          handleModuleCardGet(module);
+          return;
+        }
+        if (mode === 'set') {
+          handleModuleCardSet(module);
+          return;
+        }
+        assignSelectedModule(module);
+      }
+
+      // Clears the current selection and resets any loading/disabled visual state left on cards.
+      function clearSelectedModule() {
+        state.selectedModule = null;
+        closeSetUploadModal();
+
+        const resultEl = document.getElementById('result');
+        const sendStatusEl = document.getElementById('sendStatus');
+        if (resultEl) resultEl.textContent = 'No module selected.';
+        if (sendStatusEl) sendStatusEl.textContent = 'No module selected.';
+
+        const moduleName = document.getElementById('setUploadModuleName');
+        if (moduleName) moduleName.textContent = 'Selected module';
+
+        document.querySelectorAll('.module-card').forEach(function (card) {
+          card.classList.remove('loading');
+        });
+
+        document.querySelectorAll('.mini-btn.get, .mini-btn.reset').forEach(function (button) {
+          button.disabled = false;
+          button.classList.remove('is-busy');
+        });
+      }
+
+      function openSetUploadModal(module) {
+        // Shows the "send a preset file to this module" modal, labeled with the selected module.
+        const overlay = document.getElementById('setUploadModalOverlay');
+        const moduleName = document.getElementById('setUploadModuleName');
+        if (!overlay || !moduleName) return;
+        const label = module && (module.label || module.module_name || module.name || module.address || 'Selected module');
+        moduleName.textContent = label ? 'Selected: ' + label : 'Selected module';
+        overlay.classList.add('visible');
+        overlay.setAttribute('aria-hidden', 'false');
+      }
+
+      function closeSetUploadModal() {
+        const overlay = document.getElementById('setUploadModalOverlay');
+        if (!overlay) return;
+        overlay.classList.remove('visible');
+        overlay.setAttribute('aria-hidden', 'true');
+      }
+
+      function selectModuleForSet(module) {
+        // Selects a module and immediately opens the upload modal for it (used by card "Set" buttons).
+        if (!module) return;
+        assignSelectedModule(module);
+        openSetUploadModal(module);
+      }
+
+      // ============================================================================
+      // SECTION: CATALOG BUILDING & PANEL NAVIGATION
+      // Builds the module grids (Catalogue/My 200e/Send) from scan results and controls
+      // which panel/nav-button is visible.
+      // ============================================================================
+
+      // True once at least one scan (or the cached scan) has populated the catalog - gates
+      // access to the dashboard/fetch panels (see updateCatalogAccessState).
+      function isCatalogAvailable() {
+        return Array.isArray(state.catalogModules) && state.catalogModules.length > 0;
+      }
+
+      // Switches the visible panel and highlights the matching nav button.
+      function showPanel(targetId) {
+        const target = targetId ? document.getElementById(targetId) : null;
+        if (!target) return;
+        state.activePanelId = targetId;
+
+        document.querySelectorAll('.nav-btn').forEach(function (button) {
+          const active = button.dataset.target === targetId;
+          button.classList.toggle('active', active);
+        });
+
+        document.querySelectorAll('.panel').forEach(function (panel) {
+          panel.classList.toggle('active', panel.id === targetId);
+        });
+
+        if (targetId === 'sendPanel') {
+          const input = document.getElementById('presetFileInput');
+          if (input) {
+            setTimeout(function () {
+              input.focus({ preventScroll: true });
+            }, 60);
+          }
+        }
+      }
+
+      // Shows/hides nav buttons depending on whether a scan has ever populated the catalog -
+      // before that, only the Scan panel itself is reachable.
+      function updateCatalogAccessState() {
+        const enabled = isCatalogAvailable();
+        const actions = document.querySelectorAll('.nav-btn');
+        const scanButton = document.querySelector('.nav-btn[data-target="scanPanel"]');
+        const dashboardButton = document.querySelector('.nav-btn[data-target="dashboardPanel"]');
+        const fetchNavButton = document.querySelector('.nav-btn[data-target="fetchPanel"]');
+        const activePanelId = state.activePanelId || 'fetchPanel';
+
+        actions.forEach(function (button) {
+          const target = button.dataset.target;
+          const isScan = target === 'scanPanel';
+          const visible = isScan || target === 'fetchPanel' && (activePanelId === 'fetchPanel' || enabled)
+            || enabled && target === 'dashboardPanel';
+
+          button.disabled = !visible;
+          button.style.opacity = visible ? '1' : '0';
+          button.style.pointerEvents = visible ? 'auto' : 'none';
+          button.style.display = visible ? 'block' : 'none';
+
+          if (!visible) {
+            button.classList.remove('active');
+          }
+        });
+
+        const fetchActionButtons = document.querySelectorAll('#batchFetchButton, #batchSendButton, #exportCurrentBtn, #fetchButton');
+        fetchActionButtons.forEach(function (button) {
+          button.disabled = !enabled;
+          button.style.opacity = enabled ? '1' : '0.45';
+          button.style.pointerEvents = enabled ? 'auto' : 'none';
+        });
+
+        document.querySelectorAll('.panel').forEach(function (panel) {
+          const isDashboard = panel.id === 'dashboardPanel';
+          const isFetch = panel.id === 'fetchPanel';
+          const isScan = panel.id === 'scanPanel';
+          // Side panels (Write Firmware, Setup, etc.) are only ever toggled by explicit user
+          // action via showPanel() - leave their current visibility untouched here.
+          if (!isDashboard && !isFetch && !isScan) return;
+          const shouldShow = panel.id === activePanelId;
+          panel.classList.toggle('active', shouldShow);
+        });
+
+        actions.forEach(function (button) {
+          button.classList.toggle('active', button.dataset.target === activePanelId && !button.disabled);
+        });
+      }
+
+      // Builds the catalog used by the UI and availability badges.
+      // The result includes the module name, image, value and whether the module was
+      // detected as present on the MKR1000 during the latest scan or cache load.
+      function getCatalogModuleList() {
+        const candidates = Array.isArray(state.catalogModules) && state.catalogModules.length
+          ? state.catalogModules
+          : (Array.isArray(state.scanResults) ? state.scanResults : []);
+
+        const availableLookup = new Set();
+        const valueOccurrences = {};
+
+        candidates.forEach(function (module) {
+          if (!module) return;
+          const value = String(module.value || module.module_address || module.address || '').trim().toLowerCase();
+          const label = String(module.label || module.module_name || module.name || '').trim().toLowerCase();
+
+          if (value) {
+            valueOccurrences[value] = (valueOccurrences[value] || 0) + 1;
+            if (label) availableLookup.add(value + '::' + label);
+            else availableLookup.add(value);
+          }
+
+          if (label) {
+            availableLookup.add(label);
+          }
+        });
+
+        return ALL_MODULES.map(function (module) {
+          const value = module.value || '';
+          const label = module.label || module.code || value;
+          const addressKey = String(value).trim().toLowerCase();
+          const labelKey = String(label).trim().toLowerCase();
+          const exactKey = addressKey + '::' + labelKey;
+          const hasUniqueValue = !value || (valueOccurrences[addressKey] || 0) <= 1;
+          const available = availableLookup.has(exactKey)
+            || ((hasUniqueValue && valueOccurrences[addressKey]) && availableLookup.has(addressKey))
+            || availableLookup.has(labelKey);
+
+          return {
+            value: value,
+            label: label,
+            code: module.code || label,
+            image: getModuleImage(label),
+            available: available,
+            status: available ? 'Available' : 'Not available',
+            payload: null
+          };
+        });
+      }
+
+      // Converts the internal catalog into the simplified shape used by the module grids.
+      function getDiscoveredModules() {
+        const catalog = getCatalogModuleList();
+        if (!catalog.length) return [];
+        return catalog.filter(function (module) {
+          return module && module.value && module.label;
+        }).map(function (module) {
+          return {
+            value: module.value,
+            label: module.label,
+            code: module.code || module.label,
+            available: !!module.available
+          };
+        });
+      }
+
+      function applyInitialScanPreviewState() {
+        state.activePanelId = 'fetchPanel';
+        const homeButton = document.querySelector('.nav-btn[data-target="fetchPanel"]');
+        if (homeButton) {
+          homeButton.classList.add('active');
+        }
+
+        document.querySelectorAll('.nav-btn').forEach(function (button) {
+          const isHome = button.dataset.target === 'fetchPanel';
+          button.style.display = isHome ? 'block' : 'none';
+          button.style.opacity = isHome ? '1' : '0';
+          button.style.pointerEvents = isHome ? 'auto' : 'none';
+          button.disabled = !isHome;
+          button.classList.toggle('active', isHome);
+        });
+
+        document.querySelectorAll('.panel').forEach(function (panel) {
+          panel.classList.toggle('active', panel.id === 'fetchPanel');
+        });
+
+        const catalogGrid = document.getElementById('catalogGrid');
+        if (catalogGrid) {
+          catalogGrid.innerHTML = '';
+          ALL_MODULES.slice(0, 12).forEach(function (module) {
+            const card = document.createElement('button');
+            card.type = 'button';
+            card.className = 'module-card catalog-preview-card';
+            card.disabled = true;
+            const image = document.createElement('img');
+            image.src = getModuleImage(module.label);
+            image.alt = module.label;
+            image.loading = 'lazy';
+            const info = document.createElement('div');
+            info.className = 'module-info';
+            info.innerHTML = '<strong>' + module.label + '</strong><span>' + module.value + '</span>';
+            card.appendChild(image);
+            card.appendChild(info);
+            catalogGrid.appendChild(card);
+          });
+        }
+      }
+
+      // Renders one of the module card grids.
+      // The callback receives the selected module and the action mode ('get', 'set',
+      // or simple selection) so cards can trigger the same behavior across panels.
+      function renderModuleCards(targetId, onSelect, moduleList) {
+        const target = document.getElementById(targetId);
+        if (!target) return;
+        target.innerHTML = '';
+
+        const hasExplicitList = Array.isArray(moduleList);
+        const discoveredModules = hasExplicitList ? moduleList : getDiscoveredModules();
+        const previewModules = (!hasExplicitList && !discoveredModules.length && !state.catalogModules.length)
+          ? ALL_MODULES.map(function (module) {
+              return {
+                value: module.value,
+                label: module.label,
+                code: module.code,
+                image: getModuleImage(module.label),
+                available: false,
+                status: 'Catalog preview'
+              };
+            })
+          : discoveredModules;
+
+        if (!previewModules.length) {
+          const emptyMessage = hasExplicitList
+            ? 'No available modules match the current scan result.'
+            : 'Scan the system to discover the modules present on the network.';
+          target.innerHTML = '<div class="empty-state">' + emptyMessage + '</div>';
+          return;
+        }
+
+        previewModules.forEach((module) => {
+          const card = document.createElement('div');
+          card.className = 'module-card' + ((!discoveredModules.length && !state.catalogModules.length) ? ' catalog-preview-card' : '');
+          card.dataset.moduleValue = module.value;
+          card._moduleData = module;
+          card.setAttribute('role', 'button');
+          card.setAttribute('tabindex', '0');
+
+          const image = document.createElement('img');
+          image.src = module.image || getModuleImage(module.label);
+          image.alt = module.label;
+          image.loading = 'lazy';
+
+          const info = document.createElement('div');
+          info.className = 'module-info';
+          info.innerHTML = '<strong>' + module.label + '</strong><span>' + module.value + '</span><span class="module-status ' + (module.available ? 'available' : 'unavailable') + '">' + (module.available ? 'Available' : 'Not available') + '</span>';
+
+          const isPreview = !discoveredModules.length && !state.catalogModules.length;
+          const shouldShowActions = targetId !== 'catalogGrid';
+
+          if (shouldShowActions && !isPreview) {
+            const actions = document.createElement('div');
+            actions.className = 'module-actions';
+
+            const getButton = document.createElement('button');
+            getButton.type = 'button';
+            getButton.className = 'mini-btn get';
+            getButton.textContent = 'Get';
+            getButton.onclick = function (event) {
+              event.preventDefault();
+              event.stopPropagation();
+              if (card.classList.contains('loading')) return;
+              handleModuleCardGet(module);
+            };
+
+            const setButton = document.createElement('button');
+            setButton.type = 'button';
+            setButton.className = 'mini-btn set';
+            setButton.textContent = 'Set';
+            setButton.onclick = function (event) {
+              event.preventDefault();
+              event.stopPropagation();
+              selectModuleForSet(module);
+              if (typeof onSelect === 'function') onSelect(module, 'set');
+            };
+
+            const resetButton = document.createElement('button');
+            resetButton.type = 'button';
+            resetButton.className = 'mini-btn reset';
+            resetButton.textContent = 'Reset';
+            resetButton.onclick = function (event) {
+              event.preventDefault();
+              event.stopPropagation();
+              if (resetButton.classList.contains('is-busy')) return;
+              eraseModulePresets(module);
+            };
+
+            actions.appendChild(getButton);
+            actions.appendChild(setButton);
+            actions.appendChild(resetButton);
+            card.appendChild(actions);
+          }
+
+          if (targetId === 'catalogGrid') {
+            const scanActions = document.createElement('div');
+            scanActions.className = 'module-actions';
+
+            const scanButton = document.createElement('button');
+            scanButton.type = 'button';
+            scanButton.className = 'mini-btn scan';
+            scanButton.textContent = 'Scan';
+            scanButton.disabled = !!window.scanInProgress;
+            scanButton.onclick = function (event) {
+              event.preventDefault();
+              event.stopPropagation();
+              scanSingleModuleFromCard(module, card);
+            };
+
+            scanActions.appendChild(scanButton);
+            card.appendChild(scanActions);
+          }
+
+          card.appendChild(image);
+          card.appendChild(info);
+
+          if (!isPreview) {
+            card.onclick = function (event) {
+              if (event && event.target && event.target.closest && event.target.closest('.mini-btn')) {
+                return;
+              }
+              if (typeof onSelect === 'function') onSelect(module, 'select');
+            };
+            card.onkeydown = function (event) {
+              if (event && (event.key === 'Enter' || event.key === ' ')) {
+                event.preventDefault();
+                if (typeof onSelect === 'function') onSelect(module, 'select');
+              }
+            };
+          }
+
+          target.appendChild(card);
+        });
+      }
+
+      // Refreshes every module grid after a scan, cache load, or selection change.
+      // The catalog, fetch grid, and send grid all use the same source of truth.
+      function refreshModuleDisplays() {
+        const availableModules = getDiscoveredModules();
+        // Send and Receive must reflect the exact firmware inventory after any shared-address
+        // choice. Rebuilding these grids from ALL_MODULES can omit a selected alias.
+        const selectedModules = (Array.isArray(state.catalogModules) && state.catalogModules.length
+          ? state.catalogModules
+          : state.scanResults).filter(function (module) {
+          return module && module.available === true && module.value && module.label;
+        });
+
+        const fetchTitle = document.getElementById('fetchPanelTitle');
+        if (fetchTitle) {
+          fetchTitle.textContent = String(selectedModules.length) + ' modules available';
+        }
+
+        renderModuleCards('catalogGrid', function (module, mode) {
+          handleModuleAction(module, mode);
+        }, availableModules);
+
+        renderModuleCards('moduleSelectGrid', function (module, mode) {
+          handleModuleAction(module, mode);
+        }, selectedModules);
+
+        renderModuleCards('sendSelectGrid', function (module, mode) {
+          handleModuleAction(module, mode);
+        }, selectedModules);
+      }
+
+      // Thin wrapper kept for readability at call sites that build the catalog from scratch.
+      function buildCatalog() {
+        refreshModuleDisplays();
+      }
+
+      // ============================================================================
+      // SECTION: SCAN CACHE & STARTUP INVENTORY
+      // Persists/restores the detected module list in localStorage and loads the
+      // firmware's cached boot-time scan (/presentmodules), so the catalog survives
+      // page reloads without a full re-scan.
+      // ============================================================================
+
+      const SCANNED_MODULES_STORAGE_KEY = 'mkr1000_scanned_modules';
+
+      // Saves the currently detected modules in browser storage so the catalog can be
+      // restored after a page reload without re-running the full scan.
+      function persistScannedModuleCache() {
+        const payload = state.scanResults
+          .filter(function (module) {
+            return module && module.available === true && module.label;
+          })
+          .map(function (module) {
+            return {
+              value: module.value,
+              label: module.label,
+              code: module.code || module.label,
+              image: module.image || getModuleImage(module.label),
+              available: true,
+              status: module.status || 'Available',
+              payload: module.payload || null
+            };
+          });
+
+        try {
+          const addresses = payload.map(function (module) {
+            return String(module.value || '').trim().toLowerCase();
+          }).filter(Boolean);
+          localStorage.setItem(SCANNED_MODULES_STORAGE_KEY, JSON.stringify({
+            addresses: addresses,
+            modules: payload
+          }));
+          setStatus('scanStatus', 'Saved detected module list to browser storage.');
+        } catch (error) {
+          setStatus('scanStatus', 'Storage unavailable. The scan results are still available in memory.');
+        }
+      }
+
+      // Clears the saved scan cache and resets the in-memory UI state to the empty
+      // catalog. This is used when the user wants to force a fresh detection pass.
+      function clearScannedModuleCache() {
+        try {
+          localStorage.removeItem(SCANNED_MODULES_STORAGE_KEY);
+        } catch (error) {
+          // Ignore storage failures and still clear the persisted cache.
+        }
+
+        state.selectedModule = null;
+        state.catalogModules = [];
+        state.scanResults = [];
+
+        const fetchTitle = document.getElementById('fetchPanelTitle');
+        if (fetchTitle) {
+          fetchTitle.textContent = '0 modules available';
+        }
+
+        updateCatalogAccessState();
+        updateCounts();
+        renderScanResults();
+        refreshModuleDisplays();
+
+        const resultEl = document.getElementById('result');
+        if (resultEl) resultEl.textContent = 'No module selected.';
+        const sendStatusEl = document.getElementById('sendStatus');
+        if (sendStatusEl) sendStatusEl.textContent = 'No module selected.';
+        setStatus('scanStatus', 'Cached module list cleared.');
+      }
+
+      // Restores the last successful scan from localStorage and rebuilds the UI state.
+      // This keeps previously detected modules visible even if the user refreshes the page.
+      function loadScannedModuleCache() {
+        try {
+          const raw = localStorage.getItem(SCANNED_MODULES_STORAGE_KEY);
+          if (!raw) {
+            setStatus('scanStatus', 'No cached module list available.');
+            return;
+          }
+
+          const parsed = JSON.parse(raw || '[]');
+          const list = Array.isArray(parsed) ? parsed : (parsed && Array.isArray(parsed.modules) ? parsed.modules : []);
+          const normalized = list.filter(function (module) {
+            return module && (module.value || module.module_address || module.address || module.label || module.module_name);
+          }).map(function (module) {
+            const value = String(module.value || module.module_address || module.address || '').trim();
+            const label = String(module.label || module.module_name || module.name || value || '').trim();
+
+            const exactMatch = ALL_MODULES.find(function (candidate) {
+              const candidateValue = String(candidate.value || '').trim().toLowerCase();
+              const candidateLabel = String(candidate.label || '').trim().toLowerCase();
+              const cachedValue = value.toLowerCase();
+              const cachedLabel = label.toLowerCase();
+              return candidateValue === cachedValue && candidateLabel === cachedLabel;
+            });
+
+            return {
+              value: value,
+              label: label,
+              code: exactMatch ? exactMatch.code : (module.code || label),
+              available: true,
+              image: module.image || getModuleImage(label),
+              status: 'Available',
+              payload: module.payload || null
+            };
+          });
+
+          if (normalized.length) {
+            state.catalogModules = normalized.slice();
+            state.scanResults = normalized.slice();
+            updateCatalogAccessState();
+            updateCounts();
+            renderScanResults();
+            refreshModuleDisplays();
+            setStatus('scanStatus', String(normalized.length) + ' modules available');
+            return {
+              modules: normalized,
+              addresses: parsed && Array.isArray(parsed.addresses)
+                ? parsed.addresses.map(function (address) { return String(address || '').trim().toLowerCase(); }).filter(Boolean)
+                : normalized.map(function (module) { return String(module.value || '').trim().toLowerCase(); }).filter(Boolean)
+            };
+          }
+        } catch (error) {
+          setStatus('scanStatus', 'No valid cached module list found.');
+        }
+        return { modules: [], addresses: [] };
+      }
+
+      // Compares inventories as address sets, because the firmware scan order can vary
+      // between boots while the physical module list remains unchanged.
+      function sameModuleAddressList(first, second) {
+        const normalize = function (addresses) {
+          return (Array.isArray(addresses) ? addresses : [])
+            .map(function (address) { return String(address || '').trim().toLowerCase(); })
+            .filter(Boolean)
+            .sort();
+        };
+        const left = normalize(first);
+        const right = normalize(second);
+        return left.length === right.length && left.every(function (address, index) {
+          return address === right[index];
+        });
+      }
+
+      function resolveStartupModuleChoices(modules, onComplete) {
+        const resolved = [];
+        let index = 0;
+
+        function chooseNext() {
+          if (index >= modules.length) {
+            if (typeof onComplete === 'function') onComplete(resolved);
+            return;
+          }
+
+          const module = modules[index++];
+          if (!Array.isArray(module.options) || module.options.length < 2) {
+            resolved.push(module);
+            chooseNext();
+            return;
+          }
+
+          showAmbiguousChoiceOverlay(module, module.options, function (selectedOption) {
+            resolved.push({
+              value: module.value,
+              label: selectedOption.label,
+              code: selectedOption.code || selectedOption.label,
+              image: selectedOption.image || getModuleImage(selectedOption.label),
+              available: true,
+              status: 'Available'
+            });
+            chooseNext();
+          });
+        }
+
+        chooseNext();
+      }
+
+      function loadStartupModuleList(onComplete, attempt, showOverlay, cachedState) {
+        // Load the firmware's cached boot scan; unlike queueSystemScan(), this makes no
+        // per-address I2C requests from the browser and does not download preset data.
+        const scanAttempt = Number.isFinite(attempt) ? attempt : 0;
+        const xhr = new XMLHttpRequest();
+        const requestUrl = MKR1000_BASE_URL + '/presentmodules';
+        xhr.timeout = HTTP_REQUEST_TIMEOUT;
+        xhr.onload = function () {
+          try {
+            const response = JSON.parse(xhr.responseText || '{}');
+            state.v2Firmware = response.supported === false;
+            if (response.supported !== false && response.complete === false && scanAttempt < 180) {
+              setStatus('scanStatus', 'The MKR1000 startup module scan is still in progress...');
+              setTimeout(function () {
+                loadStartupModuleList(onComplete, scanAttempt + 1, showOverlay, cachedState);
+              }, 1000);
+              return;
+            }
+            const addresses = Array.isArray(response.addresses) ? response.addresses : [];
+            const cachedModules = cachedState && Array.isArray(cachedState.modules)
+              ? cachedState.modules
+              : [];
+            const cachedAddresses = cachedState && Array.isArray(cachedState.addresses)
+              ? cachedState.addresses
+              : [];
+
+            // Do not erase a valid local inventory when the firmware has not returned an
+            // address list yet. A genuinely changed inventory is handled below once the
+            // endpoint provides a usable list.
+            if (!addresses.length && cachedModules.length && cachedAddresses.length) {
+              state.scanResults = cachedModules.slice();
+              state.catalogModules = cachedModules.slice();
+              updateCatalogAccessState();
+              updateCounts();
+              renderScanResults();
+              refreshModuleDisplays();
+              setStatus('scanStatus', 'Using the saved module list while the MKR1000 inventory is unavailable.');
+              if (typeof onComplete === 'function') onComplete(cachedModules.slice(), response);
+              return;
+            }
+
+            // Reuse the resolved local list when the firmware inventory is unchanged. This
+            // also preserves the user's choices for shared addresses across page reloads.
+            if (cachedModules.length && cachedAddresses.length && sameModuleAddressList(addresses, cachedAddresses)) {
+              state.scanResults = cachedModules.slice();
+              state.catalogModules = cachedModules.slice();
+              updateCatalogAccessState();
+              updateCounts();
+              renderScanResults();
+              refreshModuleDisplays();
+              setStatus('scanStatus', 'Loaded ' + cachedModules.length + ' module(s) from local storage; MKR1000 inventory unchanged.');
+              if (typeof onComplete === 'function') onComplete(cachedModules.slice(), response);
+              return;
+            }
+
+            const modules = [];
+            addresses.forEach(function (address) {
+              const addressKey = String(address || '').toLowerCase();
+              const matches = ALL_MODULES.filter(function (module) {
+                return String(module.value || '').toLowerCase() === addressKey;
+              });
+              const primary = matches[0] || {
+                value: address,
+                label: 'Unknown module ' + address,
+                code: 'unknown-' + addressKey
+              };
+              modules.push({
+                value: primary.value,
+                label: matches.length ? matches.map(function (module) { return module.label; }).join(' / ') : primary.label,
+                code: primary.code || primary.label,
+                image: matches.length ? getModuleImage(primary.label) : getModuleImage('generic'),
+                available: true,
+                status: 'Available',
+                options: matches
+              });
+            });
+            resolveStartupModuleChoices(modules, function (selectedModules) {
+              state.scanResults = selectedModules;
+              state.catalogModules = selectedModules.slice();
+              persistScannedModuleCache();
+              updateCatalogAccessState();
+              updateCounts();
+              renderScanResults();
+              refreshModuleDisplays();
+              if (showOverlay) showPresentModulesOverlay(selectedModules);
+              if (response.supported === false) {
+                setStatus('scanStatus', 'The MKR1000 is running v2 firmware; startup query inventory is not supported.');
+              } else if (response.complete === false) {
+                setStatus('scanStatus', 'The MKR1000 startup module scan is still in progress.');
+              } else {
+                setStatus('scanStatus', 'Loaded ' + selectedModules.length + ' module address(es) from the MKR1000 startup scan.');
+                setTimeout(function () {
+                  showWpmLoader(false);
+                }, 3000);
+              }
+              if (typeof onComplete === 'function') onComplete(selectedModules, response);
+            });
+          } catch (error) {
+            writeScanDebugState('Startup module list', 'PARSE_ERROR', error.message || String(error));
+            if (typeof onComplete === 'function') onComplete([], null, error);
+          }
+        };
+        xhr.onerror = xhr.ontimeout = function () {
+          writeScanDebugState('Startup module list', 'TIMEOUT/ERROR', 'No response from ' + requestUrl);
+          if (typeof onComplete === 'function') onComplete([], null, new Error('No response from ' + requestUrl));
+        };
+        xhr.open('GET', requestUrl, true);
+        xhr.send(null);
+      }
+
+      // ============================================================================
+      // SECTION: NETWORK HELPERS, DIAGNOSTICS & MISC UTILITIES
+      // Low-level XHR wrapper shared by every device call, the on-screen scan debug log,
+      // the manual network-check tool, and a free-text module-identity guesser used as
+      // a last resort.
+      // ============================================================================
+
+      // Reads a File object as text, calling onDone(text, filename) or onError(message).
+      function readFile(file, onDone, onError) {
+        const reader = new FileReader();
+        reader.onerror = function () {
+          if (onError) onError('File read failed.');
+        };
+        reader.onload = function () {
+          if (onDone) onDone(reader.result, file.name);
+        };
+        reader.readAsText(file, 'UTF-8');
+      }
+
+      // Builds a user-facing message for a failed device request (status is unused beyond
+      // choosing wording, since the MKR1000 rarely returns a real HTTP error body).
+      function describeDeviceOfflineError(url, status) {
+        const label = status === 408 ? 'timed out' : (status === 0 ? 'offline' : 'returned HTTP ' + status);
+        return 'MKR1000 server is temporarily unavailable while requesting ' + url + '. The scan will keep retrying softly.';
+      }
+
+      // 252e's raw dump is far larger than any other module's, so its requests alone get the
+      // longer timeout; every other module keeps the default.
+      function resolveRequestTimeout(url) {
+        return String(url || '').toLowerCase().indexOf('addr=0x5f') !== -1 ? HTTP_REQUEST_TIMEOUT_LARGE : HTTP_REQUEST_TIMEOUT;
+      }
+
+      // Generic network helper used by the device calls.
+      // It centralizes timeout/error handling so the rest of the app can focus on the
+      // business logic instead of repeated XHR boilerplate.
+      function buildSingleRequest(method, url, payload, successHandler, errorHandler) {
+        const xhr = new XMLHttpRequest();
+        xhr.timeout = resolveRequestTimeout(url);
+        xhr.onreadystatechange = function () {
+          if (xhr.readyState !== 4) return;
+          if (xhr.status >= 200 && xhr.status < 300) {
+            if (successHandler) successHandler(xhr.responseText, xhr.status);
+          } else {
+            const message = describeDeviceOfflineError(url, xhr.status);
+            if (errorHandler) errorHandler(message, xhr.status);
+          }
+        };
+        xhr.ontimeout = function () {
+          const message = describeDeviceOfflineError(url, 408);
+          if (errorHandler) errorHandler(message, 408);
+        };
+        xhr.onerror = function () {
+          const message = describeDeviceOfflineError(url, 0);
+          if (errorHandler) errorHandler(message, 0);
+        };
+        xhr.open(method, url, true);
+        if (payload && typeof payload === 'string') {
+          xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+        }
+        xhr.send(payload || null);
+      }
+
+      // Appends a line to the small on-screen scan debug log, keeping only the last 3 entries.
+      function appendScanDebug(message) {
+        const log = document.getElementById('scanDebugLog');
+        if (!log) return;
+
+        const current = String(log.textContent || '').trim();
+        const lines = current ? current.split(/\n/).filter(function (line) { return line && line.trim(); }) : [];
+        const nextLines = lines.concat(String(message || '').trim()).slice(-3);
+        log.textContent = nextLines.join('\n');
+        syncWpmLoaderOverlay();
+      }
+
+      // Formats one scan-debug log entry: "<label> => <status> :: <detail snippet>".
+      function writeScanDebugState(label, status, detail) {
+        const snippet = String(detail || '').replace(/\s+/g, ' ').slice(0, 140);
+        appendScanDebug(label + ' => ' + status + (snippet ? ' :: ' + snippet : ''));
+      }
+
+      // Manual troubleshooting tool: probes the first 3 catalog modules' /getpresets endpoint
+      // and reports whether each parses to a plausible preset payload - useful for confirming
+      // basic network/device reachability without running a full system scan.
+      function runNetworkDiagnostics() {
+        const samples = ALL_MODULES.slice(0, 3);
+        const lines = [];
+        let index = 0;
+
+        function checkNext() {
+          if (index >= samples.length) {
+            setStatus('scanStatus', 'Network diagnostic complete.\n' + lines.join('\n'));
+            return;
+          }
+
+          const module = samples[index];
+          index += 1;
+
+          const xhr = new XMLHttpRequest();
+          xhr.timeout = HTTP_REQUEST_TIMEOUT;
+          xhr.onload = function () {
+            try {
+              const parsed = parseFetchedModule(xhr.responseText, module.label);
+              const snippet = String(xhr.responseText || '').replace(/\s+/g, ' ').slice(0, 120);
+              const valid = Array.isArray(parsed.presets) && parsed.presets.some(function (preset) {
+                return String(preset && preset.addr ? preset.addr : '').trim().length >= 3 && String(preset && preset.data ? preset.data : '').trim().length >= 3;
+              });
+              lines.push(module.label + ' (' + module.value + '): ' + (valid ? 'VALID' : 'INVALID') + ' - ' + snippet);
+              writeScanDebugState(module.label + ' (' + module.value + ')', valid ? 'VALID' : 'INVALID', snippet);
+            } catch (error) {
+              lines.push(module.label + ' (' + module.value + '): PARSE ERROR - ' + String(error && error.message ? error.message : error));
+              writeScanDebugState(module.label + ' (' + module.value + ')', 'PARSE ERROR', String(error && error.message ? error.message : error));
+            }
+            checkNext();
+          };
+          xhr.onerror = xhr.ontimeout = function () {
+            lines.push(module.label + ' (' + module.value + '): TIMEOUT/ERROR - ' + (xhr.status ? 'HTTP ' + xhr.status : 'No response from MKR1000'));
+            writeScanDebugState(module.label + ' (' + module.value + ')', 'TIMEOUT/ERROR', xhr.status ? 'HTTP ' + xhr.status : 'No response from MKR1000');
+            checkNext();
+          };
+          xhr.open('GET', 'http://192.168.0.1/getpresets?addr=' + module.value, true);
+          writeScanDebugState(module.label + ' (' + module.value + ')', 'REQUEST', 'GET http://192.168.0.1/getpresets?addr=' + module.value);
+          xhr.send(null);
+        }
+
+        document.getElementById('scanDebugLog').textContent = 'Running network diagnostics...';
+        setStatus('scanStatus', 'Running network diagnostics on the first three modules...');
+        checkNext();
+      }
+
+      // Generic "save this object as a downloadable JSON file" helper (distinct from
+      // triggerDownload only in that it always pretty-prints/serializes the input first).
+      function exportBackup(data, filename) {
+        const serialized = JSON.stringify(data, null, 2);
+        const blob = new Blob([serialized], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      }
+
+      // Best-effort fallback module identity guess from free text (e.g. an uploaded file's name)
+      // when no explicit module_address/module_name is available - covers only a small subset
+      // of common modules, not the full ALL_MODULES catalog.
+      function inferModuleFromText(text) {
+        if (!text) return { module_address: 'Upload', module_name: 'Uploaded Module' };
+        const lower = String(text).toLowerCase();
+        const moduleMap = [
+          ['206e', '0x60', '206e'], ['210e', '0x20', '210e'], ['223e a', '0x5B', '223e A'], ['223e m', '0x5A', '223e M'],
+          ['225e', '0x21', '225e'], ['250e a', '0x41', '250e A'], ['256e a1', '0x34', '256e A1'], ['256e a2', '0x36', '256e A2'],
+          ['259e a', '0x28', '259e A'], ['261e a', '0x2C', '261e A'], ['281e a1', '0x38', '281e A1'], ['291e a', '0x44', '291e A'],
+          ['292e a', '0x48', '292e A']
+        ];
+        for (let i = 0; i < moduleMap.length; i++) {
+          if (lower.indexOf(moduleMap[i][0]) !== -1) {
+            return { module_address: moduleMap[i][1], module_name: moduleMap[i][2] };
+          }
+        }
+        return { module_address: 'Upload', module_name: 'Uploaded Module' };
+      }
+
+      // ============================================================================
+      // SECTION: RAW DUMP PARSER - GENERIC GRID + 252e BOUNDARY-AWARE
+      // Turns a raw hex dump into {addr, data} records. splitRawByAddrList() is the
+      // generic entry point used by every module family; RECORD_BOUNDARY_PARSE_CONFIG
+      // supplies the extra options a family needs when its real record boundaries don't
+      // align to the addr-label grid (currently only 252e - see splitByContentBoundaries).
+      // ============================================================================
+
+      // Among every occurrence of `target` between lo (inclusive) and hi (exclusive), returns
+      // the one closest to `expected`, or -1 if none occurs in that range.
+      function findClosestOccurrence(data, target, expected, lo, hi) {
+        let best = -1;
+        let bestDistance = Infinity;
+        let idx = data.indexOf(target, lo);
+        while (idx !== -1 && idx < hi) {
+          const distance = Math.abs(idx - expected);
+          if (distance < bestDistance) { bestDistance = distance; best = idx; }
+          idx = data.indexOf(target, idx + 1);
+        }
+        return best;
+      }
+
+      // Finds each addr's label position inside a raw dump using only a known addr list as
+      // landmarks (same approach as split_raw_by_addr.js/.html). Consecutive addr values increase
+      // by a small, predictable step (their numeric difference), so each label is searched for
+      // near that predicted offset - keeping the CLOSEST match in that window rather than just
+      // the first one found, since a false copy of the addr text sometimes sits only a few
+      // characters away from the real label (e.g. real data ending "...0008" right before a real
+      // "0080" label reads as "...00080080...", which also contains a false "0080" 3 chars early).
+      function locateAddrLabels(data, addrs) {
+        const RADIUS = 80;
+        const labels = new Array(addrs.length).fill(-1);
+        labels[0] = data.indexOf(addrs[0]);
+        for (let i = 1; i < addrs.length; i++) {
+          const minStart = labels[i - 1] === -1 ? 0 : labels[i - 1] + addrs[i - 1].length;
+          const prev = parseInt(addrs[i - 1], 16);
+          const cur = parseInt(addrs[i], 16);
+          const stepBytes = (cur - prev + 0x10000) % 0x10000;
+          const expected = minStart + stepBytes * 2;
+          const lo = Math.max(minStart, expected - RADIUS);
+          const hi = Math.min(data.length, expected + RADIUS) + addrs[i].length;
+          const pos = findClosestOccurrence(data, addrs[i], expected, lo, hi);
+          labels[i] = pos === -1 ? data.indexOf(addrs[i], minStart) : pos;
+        }
+        return labels;
+      }
+
+      // Splits a raw dump into {addr, data} records using a module family's known addr list as
+      // landmarks. Each addr's data is every character between the end of its own label and the
+      // start of the next addr's label; the last addr's data runs to the end of the string.
+      // Never decodes or interprets the hex content itself.
+      // `options.contentBytesPerRecord` switches to boundary/content-aware splitting instead, for
+      // families whose real record boundaries don't line up with their addr-label grid (see
+      // splitByContentBoundaries below) - every other family leaves options unset.
+      function splitRawByAddrList(rawData, addrs, options) {
+        if (options && options.contentBytesPerRecord) {
+          return splitByContentBoundaries(rawData, addrs, options);
+        }
+        const data = String(rawData || '');
+        const labels = locateAddrLabels(data, addrs);
+        const presets = [];
+        for (let i = 0; i < addrs.length; i++) {
+          const start = labels[i];
+          if (start === -1) {
+            presets.push({ addr: addrs[i], data: '' });
+            continue;
+          }
+          const dataStart = start + addrs[i].length;
+          let end = data.length;
+          for (let j = i + 1; j < addrs.length; j++) {
+            if (labels[j] !== -1) { end = labels[j]; break; }
+          }
+          presets.push({ addr: addrs[i], data: data.slice(dataStart, end) });
+        }
+        return presets;
+      }
+
+      // Picks the addr list to feed splitRawByAddrList() for a given module name, mirroring the
+      // shared family grouping: 206e and 207e are the same hardware family, but only 206e has an
+      // empty_presets file, so 207e reuses the 206e addr list here too. Returns null when no addr
+      // list is known yet for the module's family - callers treat that as "can't parse".
+      function resolveAddrListForModule(moduleName) {
+        const family = getModuleFamilyToken(moduleName);
+        if (MODULE_ADDR_LISTS[family]) return MODULE_ADDR_LISTS[family];
+        if (family === '207e') return MODULE_ADDR_LISTS['206e'];
+        return null;
+      }
+
+      // Tags each record with the FRAM bank (base) it belongs to, needed by queueNextTransfer to
+      // route uploads to the correct /writememory?base=. Most modules have a single bank and
+      // never wrap, so their records are left untouched (base defaults to 0 wherever missing);
+      // a module whose addr counter wraps back down (252e's ffc0 -> 0000, since its FRAM spans
+      // two banks) gets base 0x10000 tagged onto every record from that point on.
+      function tagFramBanks(presets, addrs) {
+        let prevValue = -1;
+        let base = 0;
+        return presets.map(function (preset, i) {
+          const value = parseInt(addrs[i], 16);
+          if (value < prevValue) base = 0x10000;
+          prevValue = value;
+          return base === 0 ? preset : Object.assign({}, preset, { base: base });
+        });
+      }
+
+      // Concatenates every preset's addr+data back into one continuous hex stream, undoing
+      // whatever per-record boundaries the source used, so it can be re-split from scratch
+      // against the module's trusted, continuous label grid (see splitRawByAddrList).
+      function reconstructRawDataStream(presets) {
+        return presets.map(function (p) { return String((p && p.addr) || '') + String((p && p.data) || ''); }).join('');
+      }
+
+      // True only when re-splitting produced the same records, in the same order, with data
+      // that's either byte-identical or a clean prefix/suffix of the original (never disagreeing
+      // bytes) - i.e. reconstruction only ever fixes bad boundaries, never invents or changes
+      // real content. Used to decide whether a from-scratch re-split of the whole stream is safe
+      // to adopt over a source file's own (possibly wrong) per-record split.
+      function isReconstructionSafe(original, rebuilt) {
+        if (!Array.isArray(original) || !Array.isArray(rebuilt) || original.length !== rebuilt.length) {
+          return false;
+        }
+        for (let i = 0; i < original.length; i++) {
+          const a = original[i], b = rebuilt[i];
+          if (!a || !b || a.addr !== b.addr) return false;
+          const dataA = String(a.data || '');
+          const dataB = String(b.data || '');
+          if (dataA === dataB) continue;
+          const shorter = dataA.length < dataB.length ? dataA : dataB;
+          const longer = dataA.length < dataB.length ? dataB : dataA;
+          if (!longer.startsWith(shorter) && !longer.endsWith(shorter)) return false;
+        }
+        return true;
+      }
+
+      // 252e's 30 real presets each have a fixed content size that isn't a multiple of its FRAM's
+      // 64-byte addr-label grid, so unlike every other family its record boundaries can't be found
+      // by plain grid search - splitRawByAddrList takes these as `addrs` with the options below to
+      // switch into boundary/content-aware splitting instead. Validated on hardware in
+      // SetPresets.html's convertRawDump().
+      const PRESET_252E_ACTIVE_ADDRESSES = ['0000', '095c', '12b8', '1c14', '2570', '2ecc', '3828', '4184', '4ae0', '543c', '5d98', '66f4', '7050', '79ac', '8308', '8c64', '95c0', '9f1c', 'a878', 'b1d4', 'bb30', 'c48c', 'cde8', 'd744', 'e0a0', 'e9fc', 'f358', 'fcb4', '0610', '0f6c'];
+      const PRESET_252E_BYTES = 2396;
+      const PRESET_252E_HEADER = '0001007800';
+
+      // Locates a record's true starting boundary, trying progressively looser signatures: a
+      // doubled label (common right after a restore), label+header signature, bare label, then
+      // finally the nominal expected position if nothing else matched. Plain windowed search
+      // (first match in the window, not necessarily the closest) - matches SetPresets.html's
+      // validated anchor search exactly.
+      function findRecordBoundary(data, label, expected, radius, headerSignature) {
+        function windowedFind(needle) {
+          const lo = Math.max(0, expected - radius);
+          const hi = Math.min(data.length, expected + radius);
+          const rel = data.substring(lo, hi).indexOf(needle);
+          return rel === -1 ? -1 : lo + rel;
+        }
+        const doubled = windowedFind(label + label);
+        if (doubled !== -1) return { idx: doubled, labelLen: label.length * 2 };
+        if (headerSignature) {
+          const withHeader = windowedFind(label + headerSignature);
+          if (withHeader !== -1) return { idx: withHeader, labelLen: label.length };
+        }
+        const bare = windowedFind(label);
+        if (bare !== -1) return { idx: bare, labelLen: label.length };
+        return { idx: expected, labelLen: label.length };
+      }
+
+      // Splits a raw dump into fixed-size records whose true boundaries (`addrs`) don't align to
+      // its periodic embedded grid-label markers. This only matters for a family whose meaningful
+      // record size isn't a multiple of the grid period - e.g. 252e, whose 30 real presets are
+      // each options.contentBytesPerRecord bytes, but the FRAM still writes a label every 64 bytes
+      // regardless of preset boundaries, so most presets end mid-cell rather than on a grid line.
+      // (Confirmed on a real 252e dump: 28 of its 1124 grid cells come out 66 bytes instead of the
+      // uniform 64, exactly at preset transitions - proof the grid and the true boundaries are
+      // unrelated.) The plain grid path above gets the FRAM record boundaries right but doesn't
+      // understand these boundaries - the mismatch is invisible when every record's content
+      // happens to be identical, and only shows up (as wrong tempo, read 2 bytes early) once real,
+      // varied content is involved. Walks each record with a cumulative content-byte counter,
+      // skipping (and validating) a grid label every options.gridPeriod bytes, then re-chunks all
+      // the clean content into uniform options.gridPeriod-byte records addressed with the standard
+      // two-bank i*gridPeriod scheme - the same record shape the plain grid path above produces.
+      // Throws on a grid label mismatch, so callers can fall back to the plain grid-only split
+      // rather than trust a bad extraction.
+      function splitByContentBoundaries(rawData, addrs, options) {
+        const data = String(rawData || '').toLowerCase();
+        const contentBytesPerRecord = options.contentBytesPerRecord;
+        const gridPeriod = options.gridPeriod || 64;
+        const gapBytes = options.gapBytes || contentBytesPerRecord;
+        const headerSignature = options.headerSignature || '';
+        const contents = [];
+        let globalPos = 0; // true content bytes consumed so far, across the entire dump
+        let rawPos;
+        for (let i = 0; i < addrs.length; i++) {
+          if (i === 0) {
+            rawPos = options.leadingSkipChars || 0; // record 1 may have a small leading artifact before true content
+          } else {
+            const expected = i * gapBytes * 2;
+            const anchor = findRecordBoundary(data, addrs[i], expected, 200, headerSignature);
+            rawPos = anchor.idx + anchor.labelLen;
+          }
+          let contentHex = '';
+          while (contentHex.length < contentBytesPerRecord * 2) {
+            const bytesUntilLabel = gridPeriod - (globalPos % gridPeriod);
+            const take = Math.min(bytesUntilLabel, contentBytesPerRecord - contentHex.length / 2);
+            contentHex += data.substr(rawPos, take * 2);
+            rawPos += take * 2;
+            globalPos += take;
+            if (contentHex.length >= contentBytesPerRecord * 2) break;
+            if (globalPos % gridPeriod === 0) {
+              const label = data.substr(rawPos, 4);
+              const expectedLabel = globalPos & 0xFFFF;
+              if (parseInt(label, 16) !== expectedLabel) {
+                throw new Error('Record label mismatch extracting boundary ' + (i + 1) + ': expected ' + expectedLabel.toString(16) + ', got ' + label);
+              }
+              rawPos += 4;
+            }
+          }
+          contents.push(contentHex);
+        }
+
+        const fullHex = contents.join('');
+        const bankRecords = 0x10000 / gridPeriod;
+        const records = [];
+        let pos = 0, i = 0;
+        while (pos < fullHex.length) {
+          const chunkHexLen = Math.min(gridPeriod * 2, fullHex.length - pos);
+          const nominal = (i % bankRecords) * gridPeriod;
+          records.push({ addr: nominal.toString(16).padStart(4, '0'), data: fullHex.substr(pos, chunkHexLen) });
+          pos += chunkHexLen;
+          i++;
+        }
+        return records;
+      }
+
+      // Per-family boundary addr list + splitByContentBoundaries options, keyed by family token so
+      // a new family needing this needs no new code, just a new entry here. A family absent from
+      // this map (every one so far except 252e) falls back to { addrs: null, options: null } and
+      // keeps using the plain grid path.
+      const RECORD_BOUNDARY_PARSE_CONFIG = {
+        '252e': {
+          addrs: PRESET_252E_ACTIVE_ADDRESSES,
+          options: {
+            contentBytesPerRecord: PRESET_252E_BYTES,
+            gridPeriod: 64,
+            headerSignature: PRESET_252E_HEADER,
+            gapBytes: PRESET_252E_BYTES + 76, // content bytes plus ~76 bytes of embedded grid labels crossed per record
+            leadingSkipChars: 4 // record 1 has a 2-byte leading artifact before true content
+          }
+        }
+      };
+
+      function resolveParseConfigForModule(moduleName) {
+        return RECORD_BOUNDARY_PARSE_CONFIG[getModuleFamilyToken(moduleName)] || { addrs: null, options: null };
+      }
+
+      // ============================================================================
+      // SECTION: FETCH (GET) FLOW
+      // Converts one /getpresets HTTP response into a normalized module payload and
+      // downloads it.
+      // ============================================================================
+
+      // Resolves a module's canonical {module_address, module_name}, preferring explicit values
+      // (from the fetch target or a caller-supplied fallback module) over the free-text guess
+      // from inferModuleFromText().
+      function resolveModuleIdentity(targetModuleName, fallbackModule) {
+        const fallbackValue = fallbackModule && (fallbackModule.value || fallbackModule.module_address || fallbackModule.address);
+        const fallbackLabel = fallbackModule && (fallbackModule.label || fallbackModule.module_name || fallbackModule.name);
+        const inferred = inferModuleFromText(String(targetModuleName || fallbackLabel || ''));
+
+        return {
+          module_address: String(fallbackValue || inferred.module_address || '0x00'),
+          module_name: String(targetModuleName || fallbackLabel || inferred.module_name || 'Module')
+        };
+      }
+
+      // Converts a raw /getpresets HTTP response into {module_address, module_name, presets[]}.
+      // Every module is split with the generic addr-based parser, using its family's addr list
+      // from MODULE_ADDR_LISTS (sourced from empty_presets/*.json). A family with no addr list
+      // yet simply can't be parsed here - there is no fixed-length guessing fallback.
+      function parseFetchedModule(rawText, targetModuleName, fallbackModule) {
+        let responseText = rawText;
+
+        try {
+          const parsed = JSON.parse(String(rawText || ''));
+          if (parsed && typeof parsed === 'object') {
+            if (typeof parsed.data === 'string') {
+              responseText = parsed.data;
+            } else if (typeof parsed.raw === 'string') {
+              responseText = parsed.raw;
+            } else if (Array.isArray(parsed.addr) && typeof parsed.data === 'string') {
+              responseText = parsed.data;
+            }
+          }
+        } catch (error) {
+          responseText = rawText;
+        }
+
+        const identity = resolveModuleIdentity(targetModuleName, fallbackModule || state.selectedModule);
+        const moduleName = identity.module_name || targetModuleName || '';
+
+        const addrList = resolveAddrListForModule(moduleName);
+        if (!addrList) {
+          throw new Error('No addr list available for ' + (moduleName || 'this module') + '.');
+        }
+        const parseConfig = resolveParseConfigForModule(moduleName);
+        let rawPresets;
+        try {
+          rawPresets = parseConfig.options
+            ? splitRawByAddrList(responseText, parseConfig.addrs, parseConfig.options)
+            : splitRawByAddrList(responseText, addrList);
+        } catch (error) {
+          rawPresets = splitRawByAddrList(responseText, addrList);
+        }
+        const presetData = tagFramBanks(rawPresets, rawPresets.map(function (p) { return p && p.addr; }));
+
+        if (!presetData.length) {
+          throw new Error('Unable to parse a valid preset payload for ' + (identity.module_name || targetModuleName || 'module'));
+        }
+
+        return {
+          module_address: identity.module_address,
+          module_name: identity.module_name,
+          presets: presetData
+        };
+      }
+
+      // Fetches the preset payload for one module and optionally downloads it.
+      // This is the single-module receive flow used by the action buttons in the grids.
+      function fetchSingleModule(module, options) {
+        const moduleAddress = module.value;
+        const name = module.label || module.module_name || module.name;
+        const settings = Object.assign({
+          autoDownload: false,
+          showResult: true,
+          onComplete: null
+        }, options || {});
+        state.selectedModule = module;
+
+        enqueueTask(function (done) {
+          if (settings.showResult) {
+            setStatus('result', 'Fetching ' + name + '...');
+          }
+          buildSingleRequest('GET', 'http://192.168.0.1/getpresets?addr=' + moduleAddress, null,
+            function (responseText) {
+              try {
+                const parsed = parseFetchedModule(responseText, name);
+                const payload = JSON.stringify(parsed, null, 2);
+                state.exportData = [parsed];
+
+                if (settings.autoDownload) {
+                  const safeName = String(name || 'module').replace(/[\\/:*?"<>|]+/g, '').trim() || 'module';
+                  triggerDownload(safeName + '-presets.json', payload);
+                }
+
+                if (settings.showResult) {
+                  setStatus('result', payload);
+                  document.getElementById('saveLink').download = name + '.json';
+                  document.getElementById('saveLink').href = 'data:application/json;charset=utf-8,' + encodeURIComponent(payload);
+                  document.getElementById('saveLink').classList.remove('hidden');
+                }
+                if (typeof settings.onComplete === 'function') settings.onComplete(null, parsed);
+                done();
+              } catch (error) {
+                const message = 'Parse error: ' + String(error && error.message ? error.message : error);
+                if (settings.showResult) {
+                  setStatus('result', message);
+                }
+                if (typeof settings.onComplete === 'function') settings.onComplete(error, null);
+                done();
+              }
+            },
+            function (errorMessage) {
+              const message = 'Fetch failed: ' + errorMessage;
+              if (settings.showResult) {
+                setStatus('result', message);
+              }
+              if (typeof settings.onComplete === 'function') settings.onComplete(new Error(message), null);
+              done();
+            }
+          );
+        });
+      }
+
+      // ============================================================================
+      // SECTION: IMPORT, NORMALIZE & SET (SEND) FLOW
+      // Turns an uploaded/imported file into a validated {module_address, module_name,
+      // presets[]} payload, then chunks and uploads it to the module via /writememory
+      // plus a single restore trigger.
+      // ============================================================================
+
+      // Normalizes any user-supplied module payload (already-chunked presets[] array, or a raw
+      // single-"data"-string dump) into the {module_address, module_name, presets[]} shape the
+      // upload flow expects, returning null if nothing usable was found.
+      function normalizeImportedModulePayload(modulePayload, fallbackModule) {
+        if (!modulePayload || typeof modulePayload !== 'object') {
+          return null;
+        }
+
+        const resolvedModule = fallbackModule || {};
+        const moduleAddress = String(modulePayload.module_address || modulePayload.address || resolvedModule.value || '0x00');
+        const moduleName = String(modulePayload.module_name || modulePayload.name || resolvedModule.label || 'Module');
+
+        // The module's trusted, continuous addr label grid (every 64 bytes) - resolved once and
+        // reused both to parse a raw "data" string and to re-split presets[] below. Falls back to
+        // looking the address up in ALL_MODULES - some raw dumps carry only module_address.
+        let addrList = resolveAddrListForModule(moduleName);
+        let matchedModule = null;
+        if (!addrList) {
+          matchedModule = ALL_MODULES.find(function (m) { return String(m.value).toLowerCase() === moduleAddress.toLowerCase(); });
+          if (matchedModule) addrList = resolveAddrListForModule(matchedModule.label);
+        }
+        const parseConfig = resolveParseConfigForModule(matchedModule ? matchedModule.label : moduleName);
+
+        let presets = Array.isArray(modulePayload.presets) ? modulePayload.presets : [];
+
+        // Some families' real record boundaries don't align to their addr grid (e.g. 252e - see
+        // splitByContentBoundaries), so a grid-only split there is invisibly wrong with uniform
+        // test content and only shows up as wrong data once presets actually differ. Use the
+        // boundary/content-aware split instead when this family needs it, for both raw dumps and
+        // already-split files.
+        let usedContentAwareParser = false;
+        if (parseConfig.options) {
+          const rawStream = typeof modulePayload.data === 'string' ? modulePayload.data : reconstructRawDataStream(presets);
+          if (rawStream) {
+            try {
+              presets = splitRawByAddrList(rawStream, parseConfig.addrs, parseConfig.options);
+              usedContentAwareParser = true;
+            } catch (error) {
+              // Fall through to the plain grid parser below if content-aware extraction fails validation.
+            }
+          }
+        }
+
+        // Raw /getpresets dumps (a single hex "data" string, not a presets[] array) need the
+        // generic addr-list parser before they can be split into upload-sized preset records.
+        if (!presets.length && typeof modulePayload.data === 'string' && addrList) {
+          try {
+            presets = splitRawByAddrList(modulePayload.data, addrList);
+          } catch (error) {
+            return null;
+          }
+        }
+
+        // Some sources (e.g. the old fixed-grid "dataskip" decoder) label each record's addr
+        // correctly but guess its data boundaries wrong once records aren't all the same length.
+        // Undo whatever per-record split the source used and re-split the whole stream from
+        // scratch against the module's real, continuous-every-64-bytes addr grid - but only adopt
+        // the result when it's a safe fix (same records, never disagreeing bytes), never when it
+        // would invent or change real content. Skipped when the content-aware parser above already
+        // produced validated boundaries that this grid-only re-split would otherwise silently
+        // overwrite.
+        if (!usedContentAwareParser && addrList && presets.length) {
+          try {
+            const rebuilt = splitRawByAddrList(reconstructRawDataStream(presets), addrList);
+            if (isReconstructionSafe(presets, rebuilt)) {
+              presets = rebuilt;
+            }
+          } catch (error) {
+            // Keep the source's own boundaries if reconstruction can't run.
+          }
+        }
+
+        // Imported/reset files (empty_presets/*.json, EMPTY_PRESET_LIBRARY, a hand-edited
+        // dataskip export...) never carry a "base" field themselves, so re-tag every import here
+        // from the payload's OWN addr sequence - without this, a wrapping module's second FRAM
+        // bank silently uploads to bank 0 via queueNextTransfer's base:0 default. Safe/idempotent
+        // to run even on already-tagged presets since it's purely addr-wrap-driven.
+        presets = tagFramBanks(presets, presets.map(function (p) { return p && p.addr; }));
+
+        // A record whose "data" is longer than the fixed step to the NEXT addr spills into the
+        // following record's FRAM range - those extra bytes get overwritten by the next record's
+        // own write anyway, but shipping them has been observed to garble the module on real
+        // hardware. Clamp to the addr-arithmetic width; the true last record has no "next" addr
+        // to derive a width from, so it's left untouched.
+        const sourcePresets = presets;
+        presets = sourcePresets.map(function (preset, i) {
+          const next = sourcePresets[i + 1];
+          if (!preset || !next || !preset.addr || !next.addr) return preset;
+          const cur = parseInt(preset.addr, 16);
+          const nextAddr = parseInt(next.addr, 16);
+          if (isNaN(cur) || isNaN(nextAddr)) return preset;
+          const hexCharsToNextAddr = ((nextAddr - cur + 0x10000) % 0x10000) * 2;
+          const data = String(preset.data || '');
+          if (data.length <= hexCharsToNextAddr) return preset;
+          return Object.assign({}, preset, { data: data.slice(0, hexCharsToNextAddr) });
+        });
+
+        const normalizedPresets = presets.map(function (preset) {
+          if (!preset || typeof preset !== 'object') return null;
+          const normalized = {
+            addr: String(preset.addr || preset.address || preset.memory || '0000'),
+            data: String(preset.data || preset.value || '')
+          };
+          // Preserve the FRAM bank tag (0 / 0x10000) set by tagFramBanks - queueNextTransfer
+          // needs it to route each record to the correct /writememory?base=.
+          if (typeof preset.base === 'number') normalized.base = preset.base;
+          return normalized;
+        }).filter(Boolean);
+
+        if (!normalizedPresets.length) {
+          return null;
+        }
+
+        return {
+          module_address: moduleAddress,
+          module_name: moduleName,
+          presets: normalizedPresets
+        };
+      }
+
+      // Parses an imported file for the single-module "Set" flow: picks the entry matching the
+      // target module (by address or name) if the file contains several, normalizes it, then
+      // hands it off to sendPreparedModuleSet().
+      function connectSingleModuleSet(module, fileData) {
+        let parsed;
+        try {
+          parsed = JSON.parse(fileData);
+        } catch (err) {
+          setStatus('sendStatus', 'Invalid JSON file: ' + String(err.message || err));
+          return;
+        }
+
+        const modules = Array.isArray(parsed) ? parsed : (parsed && Array.isArray(parsed.modules) ? parsed.modules : [parsed]);
+        const modulePayload = modules.find(function (item) {
+          const candidate = item && (item.module_address || item.address || item.module_name || item.name);
+          return candidate && (
+            String(candidate).toLowerCase() === String(module.value || '').toLowerCase() ||
+            String(item.module_name || item.name || '').toLowerCase().indexOf(String(module.label || '').toLowerCase()) !== -1
+          );
+        }) || modules[0];
+
+        const normalizedPayload = normalizeImportedModulePayload(modulePayload, module);
+        if (!normalizedPayload) {
+          setStatus('sendStatus', 'The selected file does not contain a valid preset payload for ' + (module && module.label ? module.label : 'the selected module') + '.');
+          return;
+        }
+
+        sendPreparedModuleSet([normalizedPayload], 'sendStatus');
+      }
+
+      // Queues one or more already-normalized module payloads for sequential upload.
+      // onComplete (optional) fires once, after the whole queue drains (success or failure),
+      // used by the Reset flow to know when to clear its button spinner.
+      function sendPreparedModuleSet(modules, targetId, onComplete) {
+        const list = Array.isArray(modules) ? modules.slice() : [];
+        if (!list.length) {
+          setStatus(targetId, 'No modules to send.');
+          if (typeof onComplete === 'function') onComplete();
+          return;
+        }
+
+        state.batchSendQueue = list.slice();
+        state.batchSendTarget = targetId;
+        state.batchSendOnComplete = typeof onComplete === 'function' ? onComplete : null;
+        const first = list[0];
+        setStatus(targetId, 'Starting transfer for ' + list.length + ' module(s)...');
+        queueNextTransfer();
+      }
+
+      // Pops the next queued module payload and splits its presets into upload-sized chunks:
+      // a new chunk starts whenever the FRAM bank (preset.base) changes or the byte budget
+      // (MAX_JSON_PART_LENGTH) would be exceeded, so a single /writememory POST never mixes
+      // records from two different banks.
+      function queueNextTransfer() {
+        if (!state.batchSendQueue || !state.batchSendQueue.length) {
+          setStatus(state.batchSendTarget, (state.batchSendTarget ? document.getElementById(state.batchSendTarget).textContent : '') + '\nTransfer complete.');
+          const onComplete = state.batchSendOnComplete;
+          state.batchSendOnComplete = null;
+          if (typeof onComplete === 'function') onComplete();
+          return;
+        }
+
+        const item = state.batchSendQueue.shift();
+        const payload = item && item.modules ? item.modules[0] : item;
+        if (!payload) {
+          queueNextTransfer();
+          return;
+        }
+
+        const moduleAddress = payload.module_address || payload.address || '0x00';
+        const moduleLabel = payload.module_name || payload.name || moduleAddress;
+        const presets = Array.isArray(payload.presets) ? payload.presets : [];
+        const chunkList = [];
+        let part = [];
+        let bytes = 0;
+        let partBase = 0;
+
+        presets.forEach((preset) => {
+          const chunkLength = preset && preset.data ? preset.data.length : 0;
+          const presetBase = (typeof preset.base === 'number') ? preset.base : 0;
+          if (part.length && (presetBase !== partBase || (bytes + (JSON_DATA_ELEMENT_OVERHEAD * (part.length + 1))) > MAX_JSON_PART_LENGTH)) {
+            chunkList.push({ base: partBase, records: part.slice() });
+            part = [];
+            bytes = 0;
+          }
+          part.push(preset);
+          bytes += chunkLength;
+          partBase = presetBase;
+        });
+
+        if (part.length) chunkList.push({ base: partBase, records: part });
+
+        if (!chunkList.length) {
+          setStatus(state.batchSendTarget, 'No preset chunks available for ' + moduleLabel + '.');
+          queueNextTransfer();
+          return;
+        }
+
+        state.batchSendCurrent = {
+          moduleAddress: moduleAddress,
+          moduleLabel: moduleLabel,
+          chunks: chunkList,
+          chunkIndex: 0,
+          targetId: state.batchSendTarget
+        };
+
+        setStatus(state.batchSendTarget, 'Module: ' + moduleLabel + '\nAddress: ' + moduleAddress + '\nChunks: ' + chunkList.length + '\n');
+        sendNextChunk();
+      }
+
+      // Sends the current module's write chunks one at a time, then triggers a single restore
+      // once all chunks are uploaded, then moves on to the next queued module.
+      function sendNextChunk() {
+        if (!state.batchSendCurrent) return;
+        const current = state.batchSendCurrent;
+        if (current.chunkIndex >= current.chunks.length) {
+          setStatus(current.targetId, (document.getElementById(current.targetId).textContent || '') + 'Commanding restore...\n');
+          // A single restore call is enough: the MKR1000 auto-detects the bank 2 switch
+          // itself mid-restore, and a second trigger can interrupt it and crash the module.
+          buildSingleRequest('GET', 'http://192.168.0.1/setpresets?addr=' + current.moduleAddress + '&base=0', null,
+            function () {
+              setStatus(current.targetId, (document.getElementById(current.targetId).textContent || '') + 'Restore command accepted.\n');
+              state.batchSendCurrent = null;
+              setTimeout(queueNextTransfer, 300);
+            },
+            function (errorMessage) {
+              setStatus(current.targetId, (document.getElementById(current.targetId).textContent || '') + 'Restore command failed: ' + errorMessage + '\n');
+              state.batchSendCurrent = null;
+              setTimeout(queueNextTransfer, 300);
+            }
+          );
+          return;
+        }
+
+        const chunk = current.chunks[current.chunkIndex];
+        const body = JSON.stringify(chunk.records, null, 2);
+        setStatus(current.targetId, (document.getElementById(current.targetId).textContent || '') + 'Sending chunk ' + (current.chunkIndex + 1) + ' / ' + current.chunks.length + '\n');
+
+        buildSingleRequest('POST', 'http://192.168.0.1/writememory?base=' + chunk.base.toString(16), body,
+          function () {
+            current.chunkIndex += 1;
+            setTimeout(sendNextChunk, DATA_TRANSFER_WAIT);
+          },
+          function (errorMessage) {
+            setStatus(current.targetId, (document.getElementById(current.targetId).textContent || '') + 'Chunk failed: ' + errorMessage + '\n');
+            state.batchSendCurrent = null;
+            setTimeout(queueNextTransfer, 500);
+          }
+        );
+      }
+
+      // Shared file-input change handler for the three upload widgets (single Set modal, plain
+      // Send panel, batch Send panel) - routes to sendPreparedModuleSet for a multi-module batch
+      // file, or connectSingleModuleSet for a single selected module.
+      function handleImportFile(fileInputId, targetId, mode) {
+        const input = document.getElementById(fileInputId);
+        const file = input && input.files ? input.files[0] : null;
+        if (!file) return;
+        const batchSendButton = mode === 'batch' ? document.getElementById('batchSendButton') : null;
+        if (batchSendButton) setBatchButtonLoading(batchSendButton, true);
+        readFile(file, function (text) {
+          try {
+            const parsed = JSON.parse(text);
+            const modules = Array.isArray(parsed) ? parsed : (parsed && parsed.modules ? parsed.modules : [parsed]);
+            if (!modules.length) throw new Error('No module data found.');
+            if (mode === 'batch') {
+              // Normalize every entry (e.g. a raw single-"data"-string dump mixed in with
+              // already-chunked presets[] entries for other modules) before queuing the batch.
+              const normalizedModules = modules.map(function (m) { return normalizeImportedModulePayload(m); }).filter(Boolean);
+              if (!normalizedModules.length) throw new Error('No valid preset payload found in file.');
+              sendPreparedModuleSet(normalizedModules, targetId, function () {
+                if (batchSendButton) setBatchButtonLoading(batchSendButton, false);
+              });
+            } else {
+              const selected = state.selectedModule || ALL_MODULES[0];
+              connectSingleModuleSet(selected, text);
+            }
+          } catch (error) {
+            setStatus(targetId, 'Invalid file: ' + String(error && error.message ? error.message : error));
+            if (batchSendButton) setBatchButtonLoading(batchSendButton, false);
+          }
+        }, function (error) {
+          setStatus(targetId, error);
+          if (batchSendButton) setBatchButtonLoading(batchSendButton, false);
+        });
+      }
+
+      // ============================================================================
+      // SECTION: SCAN VALIDATION HEURISTICS
+      // Loose "does this response look like real preset data" checks used only during
+      // scanning - not the byte-accurate parsing used for real fetch/import.
+      // ============================================================================
+
+      // Loose check: does this /getpresets response look like "nothing is there" (null/empty/
+      // empty-array/empty-string in every known field)? Used to fail scan probes fast without
+      // running the heavier parsing logic.
+      function isEmptyModuleResponse(responseText) {
+        if (responseText === null || responseText === undefined) return true;
+
+        const text = String(responseText).trim();
+        if (!text) return true;
+
+        const compact = text.replace(/\s+/g, '');
+        if (['', 'null', 'undefined', '[]', '{}'].indexOf(compact) !== -1) return true;
+
+        try {
+          const parsed = JSON.parse(text);
+          if (Array.isArray(parsed) && parsed.length === 0) return true;
+          if (parsed && typeof parsed === 'object') {
+            if (parsed.data !== undefined && String(parsed.data).trim() === '') return true;
+            if (parsed.raw !== undefined && String(parsed.raw).trim() === '') return true;
+            if (parsed.payload !== undefined && String(parsed.payload).trim() === '') return true;
+            if (parsed.presets !== undefined && (!Array.isArray(parsed.presets) || parsed.presets.length === 0)) return true;
+          }
+        } catch (error) {
+          // Not valid JSON; keep the normal payload validation below.
+        }
+
+        return false;
+      }
+
+      // Very loose scan-time validity heuristic: most module dumps happen to contain a literal
+      // "0000" address label somewhere, so its mere presence is treated as "looks like real data".
+      // Almost always true for any non-trivial hex response - see hasValidPresetPayload for the
+      // stricter structural check used as a fallback when this doesn't match.
+      function hasModulePresenceMarker(responseText) {
+        const text = String(responseText || '').trim();
+        if (!text) return false;
+        const firstMarkerIndex = text.search(/0000/i);
+        if (firstMarkerIndex === -1) return false;
+        const preview = text.slice(Math.max(0, firstMarkerIndex - 8), Math.min(text.length, firstMarkerIndex + 12));
+        return /0000/i.test(preview) && /[0-9a-f]/i.test(preview);
+      }
+
+      // Stricter structural fallback used only when hasModulePresenceMarker didn't already say
+      // yes: uses the generic addr-list parser (when this module's family has one) and requires
+      // at least 4 plausible-looking {addr, data} pairs. This is a loose "does this look like
+      // real data" check for scan-time detection only - it does NOT guarantee byte-level
+      // correctness (see parseFetchedModule for the real, validated extraction). Families with
+      // no addr list yet simply fail this check.
+      function hasValidPresetPayload(responseText, moduleName) {
+        if (isEmptyModuleResponse(responseText)) return false;
+
+        const text = String(responseText || '');
+        if (hasModulePresenceMarker(text)) {
+          return true;
+        }
+
+        const addrList = resolveAddrListForModule(moduleName);
+        if (!addrList) return false;
+
+        try {
+          const rawJson = JSON.parse(text);
+          const rawData = rawJson && rawJson.data ? rawJson.data : text;
+          if (!String(rawData || '').trim()) return false;
+
+          const presetData = splitRawByAddrList(rawData, addrList);
+          return presetData.filter(function (preset) {
+            return String(preset && preset.addr ? preset.addr : '').trim().length >= 3 && String(preset && preset.data ? preset.data : '').trim().length >= 4;
+          }).length >= 4;
+        } catch (error) {
+          return false;
+        }
+      }
+
+      // Wraps parseFetchedModule()'s result into the plain {module_address, module_name, presets}
+      // shape stored in scan results / exported files.
+      function buildModulePayloadFromResponse(responseText, moduleName) {
+        const parsed = parseFetchedModule(responseText, moduleName);
+        return {
+          module_address: parsed.module_address || '0x00',
+          module_name: parsed.module_name || moduleName || 'Module',
+          presets: parsed.presets || []
+        };
+      }
+
+      // Builds a module payload without letting a parsing failure (e.g. a 252e structural
+      // mismatch) escape as an uncaught exception and leave the scan stuck mid-flight.
+      function safeBuildModulePayload(responseText, moduleName) {
+        try {
+          return { payload: buildModulePayloadFromResponse(responseText, moduleName), error: null };
+        } catch (error) {
+          return { payload: null, error: error && error.message ? error.message : String(error) };
+        }
+      }
+
+      // ============================================================================
+      // SECTION: FULL SYSTEM SCAN
+      // Probes every catalog module's /getpresets endpoint one at a time and renders
+      // the scan results grid.
+      // ============================================================================
+
+      // Scans exactly one module. Used by the individual "Scan" button on each dashboard
+      // card so a single module can be checked without running the full system scan.
+      function scanSingleModuleFromCard(module, card) {
+        if (!module || !module.value) return;
+        if (window.scanInProgress) {
+          updateHeaderScanStatus('A scan is already running. Please wait for it to finish.');
+          return;
+        }
+
+        const scanButton = card ? card.querySelector('.mini-btn.scan') : null;
+        const statusBadge = card ? card.querySelector('.module-status') : null;
+        if (scanButton) {
+          scanButton.disabled = true;
+          scanButton.textContent = 'Scanning...';
+        }
+        if (statusBadge) statusBadge.textContent = 'Scanning...';
+        if (card) card.classList.add('loading');
+
+        window.scanInProgress = true;
+        updateHeaderScanStatus('Scanning ' + module.label + '...');
+
+        let settled = false;
+        function finish(candidateOrNull, message) {
+          if (settled) return;
+          settled = true;
+          clearTimeout(watchdogTimer);
+          window.scanInProgress = false;
+          updateHeaderScanStatus(message);
+
+          const remaining = state.scanResults.filter(function (item) {
+            return !(item && String(item.value).toLowerCase() === String(module.value).toLowerCase() && item.label === module.label);
+          });
+          state.scanResults = candidateOrNull ? remaining.concat([candidateOrNull]) : remaining;
+          state.catalogModules = state.scanResults.slice();
+          persistScannedModuleCache();
+          refreshModuleDisplays();
+          renderScanResults();
+          updateCounts();
+        }
+
+        const xhr = new XMLHttpRequest();
+        const requestUrl = 'http://192.168.0.1/getpresets?addr=' + module.value;
+        const requestTimeout = resolveRequestTimeout(requestUrl);
+        xhr.timeout = requestTimeout;
+
+        // Safety net: guarantees scanInProgress is always released even if the XHR
+        // callbacks never fire, so one stuck scan can never block every future scan.
+        const watchdogTimer = setTimeout(function () {
+          xhr.abort();
+          finish(null, module.label + ': scan watchdog timeout.');
+        }, requestTimeout + 5000);
+
+        // Runs the existing full /getpresets fetch (unchanged) - used directly when the fast
+        // presence probe below isn't available/conclusive, and after a confirmed-present probe.
+        function fetchFullPayload() {
+          xhr.onload = function () {
+            const snippet = String(xhr.responseText || '').replace(/\s+/g, ' ').slice(0, 120);
+            const valid = hasModulePresenceMarker(xhr.responseText) || hasValidPresetPayload(xhr.responseText, module.label);
+            writeScanDebugState(module.label + ' (' + module.value + ')', valid ? 'VALID PRESET' : 'INVALID/EMPTY', snippet || 'empty');
+
+            if (!valid) {
+              finish(null, module.label + ': not available.');
+              return;
+            }
+
+            const built = safeBuildModulePayload(xhr.responseText, module.label);
+            if (built.error) {
+              writeScanDebugState(module.label + ' (' + module.value + ')', 'PARSE_ERROR', built.error);
+              finish(null, module.label + ': parse error (' + built.error + ').');
+              return;
+            }
+
+            finish({
+              value: module.value,
+              label: module.label,
+              code: module.code || module.label,
+              available: true,
+              image: getModuleImage(module.label),
+              status: 'Available',
+              payload: built.payload
+            }, module.label + ': available.');
+          };
+
+          xhr.onerror = xhr.ontimeout = function () {
+            writeScanDebugState(module.label + ' (' + module.value + ')', 'TIMEOUT/ERROR', 'No response from MKR1000');
+            finish(null, module.label + ': no response.');
+          };
+
+          writeScanDebugState(module.label + ' (' + module.value + ')', 'REQUEST', 'GET ' + requestUrl + ' | timeout=' + xhr.timeout + 'ms');
+          xhr.open('GET', requestUrl, true);
+          xhr.send(null);
+        }
+
+        fetchFullPayload();
+      }
+
+      // Starts a full scan across the known module list.
+      // Each address is requested once, the response is validated, and successful results
+      // are added to the detected list. This keeps the process simple and easy to follow
+      // for junior developers while still matching the runtime behavior of the device.
+      function queueSystemScan() {
+        if (window.scanInProgress) {
+          setStatus('scanStatus', 'Scan already running. Please wait for it to finish.');
+          return;
+        }
+
+        window.scanInProgress = true;
+        const startupScanStartedAt = Date.now();
+        state.scanResults = [];
+        syncWpmLoaderOverlay();
+        showWpmLoader(true);
+        setStatus('scanStatus', 'Reading the MKR1000 startup module inventory...');
+        loadStartupModuleList(function (modules, response, error) {
+          const elapsedMs = Date.now() - startupScanStartedAt;
+          const count = modules.length;
+          window.scanInProgress = false;
+          showWpmLoader(false);
+          if (error) {
+            setStatus('scanStatus', 'Unable to read the MKR1000 startup module inventory.');
+            openResultModal('Scan unavailable', 'The MKR1000 startup inventory could not be read.');
+            return;
+          }
+          const stateLabel = response && response.supported === false
+            ? 'unsupported by v2 firmware'
+            : (response && response.complete ? 'complete' : 'not complete');
+          setStatus('scanStatus', 'Loaded ' + count + ' module(s) from the MKR1000 startup inventory (' + stateLabel + ').');
+          openResultModal('Scan complete', count + ' module(s) found in ' + formatScanDuration(elapsedMs) + '.', 3000);
+          closeAmbiguousChoiceOverlay();
+        });
+      }
+
+      // Renders the Scan panel's result grid (distinct from the dashboard's catalogGrid) from
+      // state.scanResults, with Download/Open actions per card (hidden while a scan is running).
+      function renderScanResults() {
+        const grid = document.getElementById('scanGrid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        if (!state.scanResults.length) {
+          grid.innerHTML = '<div class="empty-state">No module has been detected yet. Scan the system to discover the modules present.</div>';
+          return;
+        }
+
+        const showActions = !window.scanInProgress;
+
+        state.scanResults.forEach((module) => {
+          const card = document.createElement('div');
+          card.className = 'module-card scan-card ' + (module.available ? 'online' : 'offline');
+
+          const image = document.createElement('img');
+          image.src = module.image;
+          image.alt = module.label;
+
+          const info = document.createElement('div');
+          info.className = 'module-info';
+          info.innerHTML = '<strong>' + module.label + '</strong><span>' + module.value + '</span>';
+
+          const status = document.createElement('div');
+          status.className = 'scan-status ' + (module.available ? 'ok' : 'warn');
+          status.textContent = module.status;
+
+          card.appendChild(image);
+          card.appendChild(info);
+          card.appendChild(status);
+
+          if (showActions) {
+            const actionRow = document.createElement('div');
+            actionRow.className = 'scan-action-row';
+
+            const downloadButton = document.createElement('button');
+            downloadButton.type = 'button';
+            downloadButton.className = 'scan-action-btn';
+            downloadButton.textContent = 'Download';
+            downloadButton.addEventListener('click', function (event) {
+              event.stopPropagation();
+              exportModulePayload(module, (module.label || 'module') + '-presets.json');
+            });
+
+            const selectButton = document.createElement('button');
+            selectButton.type = 'button';
+            selectButton.className = 'scan-action-btn';
+            selectButton.textContent = 'Open';
+            selectButton.addEventListener('click', function (event) {
+              event.stopPropagation();
+              assignSelectedModule(module);
+              document.querySelector('.nav-btn[data-target="fetchPanel"]').click();
+            });
+
+            actionRow.appendChild(downloadButton);
+            actionRow.appendChild(selectButton);
+            card.appendChild(actionRow);
+          }
+
+          card.addEventListener('click', function () {
+            if (window.scanInProgress) return;
+            assignSelectedModule(module);
+            document.querySelector('.nav-btn[data-target="fetchPanel"]').click();
+          });
+
+          grid.appendChild(card);
+        });
+      }
+
+      // ============================================================================
+      // SECTION: EVENT WIRING
+      // Attaches every button/input event listener once, at page load.
+      // ============================================================================
+
+      // Attaches browser events once the page loads.
+      // This keeps the setup centralized and avoids repeating the same wiring blocks in
+      // multiple places.
+      function setBatchButtonLoading(button, isLoading) {
+        if (!button) return;
+        button.disabled = isLoading;
+        button.classList.toggle('is-busy', isLoading);
+        button.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+      }
+
+      function registerGlobalEventHandlers() {
+        initTheme();
+
+        const themeToggleBtn = document.getElementById('themeToggleBtn');
+        if (themeToggleBtn) {
+          themeToggleBtn.addEventListener('click', function () {
+            const activeTheme = document.body.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+            applyTheme(activeTheme);
+          });
+        }
+
+        const scanSystemButton = document.getElementById('scanBtn');
+        if (scanSystemButton) {
+          scanSystemButton.addEventListener('click', queueSystemScan);
+        }
+
+        const scanDiagnosticButton = document.getElementById('scanDiagnosticBtn');
+        if (scanDiagnosticButton) {
+          scanDiagnosticButton.addEventListener('click', runNetworkDiagnostics);
+        }
+
+        const clearCacheButton = document.getElementById('clearCacheBtn');
+        if (clearCacheButton) {
+          clearCacheButton.addEventListener('click', clearScannedModuleCache);
+        }
+
+        setTimeout(function () {
+          closeResultModal();
+        }, 2000);
+
+        const fetchButton = document.getElementById('fetchButton');
+        if (fetchButton) {
+          fetchButton.addEventListener('click', function () {
+            if (!state.selectedModule) {
+              setStatus('result', 'Please select a module first.');
+              return;
+            }
+            fetchSingleModule(state.selectedModule);
+          });
+        }
+
+        const clearSelectionBtn = document.getElementById('clearSelectionBtn');
+        if (clearSelectionBtn) {
+          clearSelectionBtn.addEventListener('click', clearSelectedModule);
+        }
+
+        const sendButton = document.getElementById('sendButton');
+        if (sendButton) {
+          sendButton.addEventListener('click', function () {
+            if (!state.selectedModule) {
+              setStatus('sendStatus', 'Please select a module first.');
+              return;
+            }
+            const presetInput = document.getElementById('presetFileInput');
+            if (presetInput) presetInput.click();
+          });
+        }
+
+        const ambiguousChoiceCloseBtn = document.getElementById('ambiguousChoiceCloseBtn');
+        if (ambiguousChoiceCloseBtn) {
+          ambiguousChoiceCloseBtn.addEventListener('click', closeAmbiguousChoiceOverlay);
+        }
+
+        const ambiguousChoiceOverlay = document.getElementById('ambiguousChoiceOverlay');
+        if (ambiguousChoiceOverlay) {
+          ambiguousChoiceOverlay.addEventListener('click', function (event) {
+            if (event.target && event.target.id === 'ambiguousChoiceOverlay') {
+              closeAmbiguousChoiceOverlay();
+            }
+          });
+        }
+
+        const presentModulesCloseBtn = document.getElementById('presentModulesCloseBtn');
+        if (presentModulesCloseBtn) {
+          presentModulesCloseBtn.addEventListener('click', closePresentModulesOverlay);
+        }
+
+        const presentModulesOverlay = document.getElementById('presentModulesOverlay');
+        if (presentModulesOverlay) {
+          presentModulesOverlay.addEventListener('click', function (event) {
+            if (event.target && event.target.id === 'presentModulesOverlay') {
+              closePresentModulesOverlay();
+            }
+          });
+        }
+
+        const setUploadCloseBtn = document.getElementById('setUploadCloseBtn');
+        if (setUploadCloseBtn) {
+          setUploadCloseBtn.addEventListener('click', closeSetUploadModal);
+        }
+
+        const setUploadModalOverlay = document.getElementById('setUploadModalOverlay');
+        if (setUploadModalOverlay) {
+          setUploadModalOverlay.addEventListener('click', function (event) {
+            if (event.target && event.target.id === 'setUploadModalOverlay') {
+              closeSetUploadModal();
+            }
+          });
+        }
+
+        const setUploadConfirmBtn = document.getElementById('setUploadConfirmBtn');
+        if (setUploadConfirmBtn) {
+          setUploadConfirmBtn.addEventListener('click', function () {
+            const input = document.getElementById('setUploadFileInput');
+            if (input) input.click();
+          });
+        }
+
+        const setUploadFileInput = document.getElementById('setUploadFileInput');
+        if (setUploadFileInput) {
+          setUploadFileInput.addEventListener('change', function () {
+            const file = this.files && this.files[0];
+            if (!file) return;
+            closeSetUploadModal();
+            if (!state.selectedModule) {
+              setStatus('sendStatus', 'Please select a module first.');
+              return;
+            }
+            handleImportFile('setUploadFileInput', 'sendStatus', 'single');
+          });
+        }
+
+        const resultModalCloseBtn = document.getElementById('resultModalCloseBtn');
+        if (resultModalCloseBtn) {
+          resultModalCloseBtn.addEventListener('click', closeResultModal);
+        }
+
+        const resultModalOverlay = document.getElementById('resultModalOverlay');
+        if (resultModalOverlay) {
+          resultModalOverlay.addEventListener('click', function (event) {
+            if (event.target && event.target.id === 'resultModalOverlay') {
+              closeResultModal();
+            }
+          });
+        }
+
+        const presetFileInput = document.getElementById('presetFileInput');
+        if (presetFileInput) {
+          presetFileInput.addEventListener('change', function () {
+            handleImportFile('presetFileInput', 'sendStatus', 'single');
+          });
+        }
+
+        const rawFileInput = document.getElementById('rawFileInput');
+        if (rawFileInput) {
+          rawFileInput.addEventListener('change', function () {
+            const file = this.files && this.files[0];
+            if (!file) return;
+            readFile(file, function (text, name) {
+              try {
+                const parsed = JSON.parse(text);
+                const moduleHint = inferModuleFromText((name || '') + ' ' + (parsed && parsed.module_name ? parsed.module_name : ''));
+                if (parsed && parsed.module_address) state.selectedModule = { value: parsed.module_address, label: parsed.module_name || moduleHint.module_name };
+                if (moduleHint.module_address !== 'Upload') {
+                  const matched = ALL_MODULES.find(function (item) {
+                    return item.value === moduleHint.module_address || item.label.toLowerCase().indexOf(moduleHint.module_name.toLowerCase()) !== -1;
+                  });
+                  if (matched) state.selectedModule = matched;
+                }
+                fetchSingleModule(state.selectedModule || ALL_MODULES[0]);
+              } catch (error) {
+                setStatus('result', 'Could not parse imported raw file: ' + String(error.message || error));
+              }
+            }, function (error) {
+              setStatus('result', error);
+            });
+          });
+        }
+
+        const batchFetchButton = document.getElementById('batchFetchButton');
+        if (batchFetchButton) {
+          batchFetchButton.addEventListener('click', function () {
+            const catalogModules = (Array.isArray(state.catalogModules) && state.catalogModules.length
+              ? state.catalogModules
+              : state.scanResults).filter(function (module) {
+              return module && module.available === true && module.value && module.label;
+            });
+
+            if (!catalogModules.length) {
+              setStatus('batchFetchStatus', 'No available modules in the catalog. Run a scan or load a cached catalog first.');
+              return;
+            }
+
+            state.batchFetchMode = true;
+            state.batchFetchQueue = catalogModules.slice();
+            state.batchFetchResults = [];
+            state.batchFetchFailures = [];
+            setBatchButtonLoading(batchFetchButton, true);
+            setStatus('batchFetchStatus', 'Batch fetch started for ' + catalogModules.length + ' available modules.');
+
+            function nextBatchFetch() {
+              if (!state.batchFetchQueue.length) {
+                state.batchFetchMode = false;
+                setBatchButtonLoading(batchFetchButton, false);
+                if (state.batchFetchFailures.length) {
+                  setStatus('batchFetchStatus', 'Batch fetch incomplete. No file was downloaded. Failed modules: ' + state.batchFetchFailures.join(', ') + '.');
+                  return;
+                }
+                const payload = { generatedAt: new Date().toISOString(), modules: state.batchFetchResults };
+                setStatus('batchFetchStatus', JSON.stringify(payload, null, 2));
+                exportBackup(payload, 'all-modules-presets.json');
+                return;
+              }
+
+              const next = state.batchFetchQueue.shift();
+              const attempt = (next.batchFetchAttempt || 0) + 1;
+              next.batchFetchAttempt = attempt;
+              state.selectedModule = next;
+              setStatus('batchFetchStatus', 'Fetching ' + next.label + ' (attempt ' + attempt + ' / 3)... remaining: ' + state.batchFetchQueue.length);
+
+              function continueBatchFetch() {
+                // processQueue releases the previous request after 150 ms; keep only a
+                // small extra gap before scheduling the next module.
+                setTimeout(nextBatchFetch, 175);
+              }
+
+              function retryOrRecordFailure(message) {
+                if (attempt < 3) {
+                  state.batchFetchQueue.push(next);
+                  setStatus('batchFetchStatus', message + ' Retrying ' + next.label + '.');
+                } else {
+                  state.batchFetchFailures.push(next.label);
+                  setStatus('batchFetchStatus', message + ' Giving up on ' + next.label + ' after 3 attempts.');
+                }
+                continueBatchFetch();
+              }
+
+              enqueueTask(function (done) {
+                buildSingleRequest('GET', 'http://192.168.0.1/getpresets?addr=' + next.value, null,
+                  function (responseText) {
+                    try {
+                      const parsed = parseFetchedModule(responseText, next.label, next);
+                      const hasPresetData = Array.isArray(parsed.presets) && parsed.presets.some(function (preset) {
+                        return preset && String(preset.data || '').length > 0;
+                      });
+                      if (!hasPresetData) {
+                        throw new Error('No preset data received');
+                      }
+                      state.batchFetchResults.push(parsed);
+                      done();
+                      continueBatchFetch();
+                    } catch (error) {
+                      done();
+                      retryOrRecordFailure('Error fetching ' + next.label + ': ' + String(error.message || error) + '.');
+                    }
+                  },
+                  function (errorMessage) {
+                    done();
+                    retryOrRecordFailure('Fetch failed for ' + next.label + ': ' + errorMessage + '.');
+                  }
+                );
+              });
+            }
+
+            nextBatchFetch();
+          });
+        }
+
+        const batchSendButton = document.getElementById('batchSendButton');
+        const batchPresetFileInput = document.getElementById('batchPresetFileInput');
+
+        // Shows the embedded firmware-flashing panel (see the IIFE-wrapped script near the
+        // end of the page - kept isolated so its globals never touch this page's scope).
+        const writeFirmwareButton = document.getElementById('writeFirmwareBtn');
+        if (writeFirmwareButton) {
+          writeFirmwareButton.addEventListener('click', function () {
+            showPanel('writeFirmwarePanel');
+          });
+        }
+
+        // Shows the embedded setup panel and lazily loads its data from the MKR1000 the first
+        // time it's opened (see wpmInitSetupPanel, exposed by the IIFE-wrapped script below).
+        const openSetupButton = document.getElementById('openSetupBtn');
+        if (openSetupButton) {
+          openSetupButton.addEventListener('click', function () {
+            showPanel('setupPanel');
+            if (typeof window.wpmInitSetupPanel === 'function') window.wpmInitSetupPanel();
+          });
+        }
+
+        if (batchSendButton) {
+          batchSendButton.addEventListener('click', function () {
+            if (batchPresetFileInput) {
+              batchPresetFileInput.value = '';
+              batchPresetFileInput.click();
+            }
+          });
+        }
+
+        if (batchPresetFileInput) {
+          batchPresetFileInput.addEventListener('change', function () {
+            handleImportFile('batchPresetFileInput', 'batchSendStatus', 'batch');
+          });
+        }
+
+        const exportCurrentBtn = document.getElementById('exportCurrentBtn');
+        if (exportCurrentBtn) {
+          exportCurrentBtn.addEventListener('click', function () {
+            const payload = { generatedAt: new Date().toISOString(), modules: state.batchFetchResults.length ? state.batchFetchResults : state.exportData };
+            exportBackup(payload, 'current-batch-export.json');
+          });
+        }
+
+        document.querySelectorAll('.nav-btn').forEach(function (button) {
+          button.addEventListener('click', function () {
+            showPanel(button.dataset.target);
+          });
+        });
+
+      }
+
+      // ============================================================================
+      // SECTION: PAIRING & APP BOOTSTRAP
+      // Pings the MKR1000 before anything else runs, then kicks off the catalog build
+      // and startup inventory load once paired.
+      // ============================================================================
+
+      function showPairingOverlay(message) {
+        const overlay = document.getElementById('pairingOverlay');
+        const messageEl = document.getElementById('pairingMessage');
+        if (messageEl) messageEl.textContent = message;
+        if (overlay) {
+          overlay.classList.add('visible');
+          overlay.setAttribute('aria-hidden', 'false');
+          overlay.style.pointerEvents = 'none';
+        }
+      }
+
+      function appendPairingLog(message) {
+        const log = document.getElementById('pairingLogs');
+        const timestamp = new Date().toLocaleTimeString();
+        const line = '[' + timestamp + '] ' + String(message || '');
+        if (log) {
+          const current = String(log.textContent || '').trim();
+          const lines = current && current !== 'Pairing log is empty.'
+            ? current.split(/\n/)
+            : [];
+          log.textContent = lines.concat(line).slice(-12).join('\n');
+        }
+        console.log('[WPM pairing] ' + line);
+      }
+
+      function closePairingOverlay() {
+        const overlay = document.getElementById('pairingOverlay');
+        if (state.pairingOverlayTimer) {
+          clearTimeout(state.pairingOverlayTimer);
+          state.pairingOverlayTimer = null;
+        }
+        if (state.pairingRetryTimer) {
+          clearTimeout(state.pairingRetryTimer);
+          state.pairingRetryTimer = null;
+        }
+        if (overlay) {
+          overlay.classList.remove('visible');
+          overlay.setAttribute('aria-hidden', 'true');
+          overlay.style.pointerEvents = 'none';
+        }
+      }
+
+      // Pings a lightweight firmware endpoint before any inventory requests are started.
+      // A failed ping keeps the overlay open and retries until the MKR1000 is reachable.
+      function pingMKR1000(onConnected) {
+        showPairingOverlay('Pinging MKR1000...');
+        const xhr = new XMLHttpRequest();
+        const pingUrl = MKR1000_BASE_URL + '/presentmodules?ping=' + Date.now();
+        let settled = false;
+        appendPairingLog('Ping started: GET ' + pingUrl);
+        function retry() {
+          appendPairingLog('Retry scheduled in 2 seconds.');
+          state.pairingRetryTimer = setTimeout(function () {
+            state.pairingRetryTimer = null;
+            pingMKR1000(onConnected);
+          }, 2000);
+        }
+        function handleFailure() {
+          if (settled) return;
+          settled = true;
+          showPairingOverlay('WPM not paired');
+          appendPairingLog('Ping failed: status=' + xhr.status + ', readyState=' + xhr.readyState + '.');
+          retry();
+        }
+        function handleSuccess() {
+          if (settled) return;
+          settled = true;
+          showPairingOverlay('Paired with WPM');
+          appendPairingLog('Ping succeeded: status=' + xhr.status + ', readyState=' + xhr.readyState + '.');
+          state.pairingOverlayTimer = setTimeout(function () {
+            appendPairingLog('Pairing confirmed; closing overlay and starting module inventory.');
+            closePairingOverlay();
+            if (typeof onConnected === 'function') onConnected();
+          }, 2000);
+        }
+        xhr.timeout = 2000;
+        xhr.onreadystatechange = function () {
+          if (settled || xhr.readyState < 2) return;
+          appendPairingLog('XHR state=' + xhr.readyState + ', status=' + xhr.status + '.');
+          if (xhr.status >= 200 && xhr.status < 300) {
+            handleSuccess();
+          } else if (xhr.readyState === 4) {
+            handleFailure();
+          }
+        };
+        xhr.onload = handleSuccess;
+        xhr.onerror = handleFailure;
+        xhr.ontimeout = handleFailure;
+        xhr.open('GET', pingUrl, true);
+        xhr.send(null);
+      }
+
+      // Application bootstrap.
+      // We prepare the initial preview state first, then build the catalog, restore any
+      // cached modules, and finally render the screen so the interface is ready for the user.
+      // App bootstrap: rebuilds the catalog UI, restores any cached scan results from a previous
+      // session, then refreshes every counter/grid so the page is ready to use on load.
+      function initializeApp() {
+        appendPairingLog('Application bootstrap started.');
+        applyInitialScanPreviewState();
+        const cachedState = loadScannedModuleCache();
+        if (cachedState && cachedState.modules && cachedState.modules.length) {
+          appendPairingLog('Loaded cached module list; skipping MKR1000 inventory request.');
+          buildCatalog();
+          updateCatalogAccessState();
+          updateCounts();
+          renderScanResults();
+          refreshModuleDisplays();
+          return;
+        }
+        pingMKR1000(function () {
+          appendPairingLog('No cached module list; loading firmware inventory.');
+          buildCatalog();
+          updateCatalogAccessState();
+          loadStartupModuleList(null, 0, false, cachedState);
+          updateCounts();
+          renderScanResults();
+          refreshModuleDisplays();
+        });
+      }
+
+      try {
+        window.wpmMainScriptStarted = true;
+        registerGlobalEventHandlers();
+        initializeApp();
+      } catch (error) {
+        appendPairingLog('Bootstrap error: ' + (error && error.message ? error.message : String(error)));
+        showPairingOverlay('WPM not paired');
+      }
+    </script>
+
+    <script>
+      (function () {
+        const log = document.getElementById('pairingLogs');
+        if (!log) return;
+        const timestamp = new Date().toLocaleTimeString();
+        if (window.wpmMainScriptStarted) {
+          log.textContent += '\n[' + timestamp + '] Main script loaded.';
+        } else {
+          log.textContent += '\n[' + timestamp + '] Main script did not start. Check the loaded HTML file or browser script errors.';
+        }
+      }());
+    </script>
+
+    <script>
+      (function () {
+        // Standalone firmware-flashing tool, embedded from WriteFirmware.html and wrapped in
+        // an IIFE so its own constants/functions never touch this page's global scope.
+        const WF_MAX_JSON_PART_LENGTH = 8000; // Max bytes per POST to writememory - kept small since each part contains many tiny per-byte records, slow for the MKR1000 to parse/write.
+        const WF_JSON_DATA_ELEMENT_OVERHEAD = 26; // bytes used up per data element by tag names, colons, etc.
+        const WF_HTTP_REQUEST_TIMEOUT = 60000; // Generous timeout: a large part can take a while for the MKR1000 to parse and write to FRAM; timing out client-side while it's still processing risks freezing the board.
+        const WF_DATA_TRANSFER_WAIT = 500; // Wait this long between parts. Too short gives timeouts.
+
+        const input = document.getElementById('wfFileInput');
+        const browseBtn = document.getElementById('wfBrowseBtn');
+        const backBtn = document.getElementById('wfBackBtn');
+        const textEl = document.getElementById('wfText');
+        if (!input || !textEl) return;
+
+        var request;
+        var url = '';
+        var requestTimeout;
+        var firmwareImage = [];
+        var partsSent;
+        var textValue;
+        var filename = '';
+
+        if (browseBtn) {
+          browseBtn.addEventListener('click', function () {
+            input.click();
+          });
+        }
+
+        if (backBtn) {
+          backBtn.addEventListener('click', function () {
+            showPanel('scanPanel');
+          });
+        }
+
+        input.onchange = e => {
+          var file = e.target.files[0];
+          var reader = new FileReader();
+          textValue = '';
+          reader.readAsText(file, 'UTF-8');
+          reader.onload = readerEvent => {
+            filename = input.value.replace(/^.*\\/, ''); // strip Windows-style fakepath prefix
+            var content = readerEvent.target.result; // hex file contents as string
+            textValue = '';
+            textEl.textContent = textValue;
+            var header_id = { addr: '0000', data: getAsciiHexString('#!200EFU') };
+            var card_i2c_address = { addr: '0008', data: 'a0' };
+            var chip_count = { addr: '0009', data: '01' };
+            var chip_size = { addr: '000a', data: 'ffff' };
+            var toc_start = { addr: '000c', data: 'A00010' };
+            var termination1 = { addr: '000f', data: '00' };
+            var bang = { addr: '0010', data: getAsciiHexString('!') };
+            var module_name = { addr: '0011', data: getAsciiHexString(filename.substring(0, 4)) };
+            var hardware_version = { addr: '0015', data: '0001' };
+            var firmware_version = { addr: '0017', data: getFirmwareVersion(filename) };
+            var hex_start_i2c_address = { addr: '0019', data: 'a0' };
+            var hex_start_address = { addr: '001a', data: '0050' };
+            var hex_end_i2c_address = { addr: '001c', data: 'a0' };
+            var hex_end_address = { addr: '001d', data: '' };
+            var termination2 = { addr: '001f', data: '00' };
+
+            var firmwareImagePart = [];
+            firmwareImage = [firmwareImagePart];
+            textValue = textValue + 'Processing file ' + filename + '...\n';
+            textValue = textValue + 'Firmware for module: ' + filename.substring(0, 4) + '.\n';
+            textValue = textValue + 'Hardware version: ' + hardware_version.data + '.\n';
+            textValue = textValue + 'Firmware version: ' + filename.substring(filename.lastIndexOf('v') + 1, filename.lastIndexOf('.hex')) + '.\n';
+            if (!filenameIsV2(filename)) {
+              textValue = textValue + 'Generating v1 I2C Card Header...\n';
+              textValue = textValue + 'Writing card table of contents...\n';
+            } else {
+              textValue = textValue + 'Generating v2 I2C Card Header...\n';
+            }
+            textValue = textValue + 'Preparing output for sending...\n';
+            textEl.textContent = textValue;
+
+            setTimeout(() => {
+              if (!filenameIsV2(filename)) {
+                firmwareImagePart.push(header_id);
+                firmwareImagePart.push(card_i2c_address);
+                firmwareImagePart.push(chip_count);
+                firmwareImagePart.push(chip_size);
+                firmwareImagePart.push(toc_start);
+                firmwareImagePart.push(termination1);
+                firmwareImagePart.push(bang);
+                firmwareImagePart.push(module_name);
+                firmwareImagePart.push(hardware_version);
+                firmwareImagePart.push(firmware_version);
+                firmwareImagePart.push(hex_start_i2c_address);
+                firmwareImagePart.push(hex_start_address);
+                firmwareImagePart.push(hex_end_i2c_address);
+                firmwareImagePart.push(hex_end_address);
+                firmwareImagePart.push(termination2);
+
+                for (var i = 0x20; i < 0x50; i++) {
+                  var zerodata = { addr: '00' + i.toString(16), data: '00' };
+                  firmwareImagePart.push(zerodata);
+                }
+
+                var lines = content.split(':');
+                var address = 0x50;
+                var datacount = 0;
+                for (var i = 1; i < lines.length; i++) {
+                  firmwareImagePart.push(getJsonFromLine(address, lines[i]));
+                  address = address + lines[i].length - 1;
+                  datacount = datacount + firmwareImagePart[firmwareImagePart.length - 1].data.length;
+                  if ((datacount + WF_JSON_DATA_ELEMENT_OVERHEAD * firmwareImagePart.length) > WF_MAX_JSON_PART_LENGTH) {
+                    firmwareImagePart = [];
+                    firmwareImage.push(firmwareImagePart);
+                    datacount = 0;
+                  }
+                }
+                hex_end_address.data = (address).toString(16);
+              } else {
+                header_id.data = getAsciiHexString('#$200EFU');
+                var version = { addr: '0008', data: '02' };
+                card_i2c_address.addr = '0009';
+                chip_count.addr = '000a';
+                chip_size.addr = '000b';
+                chip_size.data = '0003ffff';
+                module_name.addr = '000f';
+                hardware_version.addr = '0013';
+                firmware_version.addr = '0015';
+                var firmware_size = { addr: '0017', data: '' };
+                firmwareImagePart.push(header_id);
+                firmwareImagePart.push(version);
+                firmwareImagePart.push(card_i2c_address);
+                firmwareImagePart.push(chip_count);
+                firmwareImagePart.push(chip_size);
+                firmwareImagePart.push(module_name);
+                firmwareImagePart.push(hardware_version);
+                firmwareImagePart.push(firmware_version);
+                firmwareImagePart.push(firmware_size);
+
+                var lines = content.split(':');
+                var address = 0x2B;
+                var datacount = 0;
+                for (var i = 1; i < lines.length; i++) {
+                  firmwareImagePart.push(getJsonFromLine(address, lines[i]));
+                  address = address + lines[i].length - 1;
+                  datacount = datacount + firmwareImagePart[firmwareImagePart.length - 1].data.length;
+                  if ((datacount + WF_JSON_DATA_ELEMENT_OVERHEAD * firmwareImagePart.length) > WF_MAX_JSON_PART_LENGTH) {
+                    firmwareImagePart = [];
+                    firmwareImage.push(firmwareImagePart);
+                    datacount = 0;
+                  }
+                }
+                var total_size = (address - 0x2B).toString(16);
+                firmware_size.data = total_size.padStart(8, '0');
+              }
+
+              var total_elements = 0;
+              for (var i = 1; i < firmwareImage.length; i++) {
+                total_elements = total_elements + firmwareImage[i].length;
+              }
+
+              var first_part = firmwareImage[0];
+              var last_part = firmwareImage[firmwareImage.length - 1];
+              var last_element = last_part[last_part.length - 1];
+              var data_length = parseInt('0x' + last_element.addr) + last_element.data.length / 2;
+              var last_address = (data_length - 1).toString(16);
+
+              textValue = textValue + 'Number of data elements: ' + total_elements + '.\n';
+              textValue = textValue + 'First address: ' + first_part[0].addr + '.\n';
+              textValue = textValue + 'Last address: ' + last_address + '.\n';
+              textValue = textValue + 'Total length: ' + data_length + '.\n';
+              textValue = textValue + 'Flashing new firmware...\n';
+              textEl.textContent = textValue;
+
+              request = new XMLHttpRequest();
+              url = 'http://192.168.0.1/writememory';
+              request.onreadystatechange = requestHandler;
+              request.ontimeout = requestOnTimeout;
+              request.timeout = WF_HTTP_REQUEST_TIMEOUT;
+              partsSent = 0;
+              requestTimeout = false;
+              sendPart();
+            }, 0);
+          };
+        };
+
+        function requestHandler() {
+          if (request.readyState !== 4) return;
+          if (partsSent < (firmwareImage.length - 1)) {
+            setTimeout(() => {
+              if (!requestTimeout) {
+                partsSent++;
+                sendPart();
+              }
+            }, WF_DATA_TRANSFER_WAIT);
+          } else if (!requestTimeout) {
+            textValue = textValue + 'Done.\n';
+            textValue = textValue + 'Reboot system with button held on ' + filename.substring(0, 4) + '.\n';
+            textEl.textContent = textValue;
+          }
+        }
+
+        function requestOnTimeout() {
+          requestTimeout = true;
+          textValue = textValue + 'Request timed out.\n';
+          textEl.textContent = textValue;
+        }
+
+        function sendPart() {
+          var firmwareImagePartString = JSON.stringify(firmwareImage[partsSent], undefined, 2);
+          textValue = textValue + 'Sending part ' + (partsSent + 1) + ' of ' + firmwareImage.length + '...\n';
+          textEl.textContent = textValue;
+          request.open('POST', url);
+          request.setRequestHeader('Content-Length', firmwareImagePartString.length);
+          request.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+          request.send(firmwareImagePartString);
+        }
+
+        function getAsciiHexString(text) {
+          var result = '';
+          for (var i = 0; i < text.length; i++) {
+            result = result + text[i].charCodeAt(0).toString(16);
+          }
+          return result;
+        }
+
+        function filenameIsV2(filename) {
+          var module_id = filename.substring(0, 4);
+          var result = true;
+          switch (module_id) {
+            case '296E': case '251E': case '257E': case '267E': case '218E': case '252E':
+            case '225H': case '226H': case '222E': case '223M': case '261E': case '225S': case '225E':
+              break;
+            default:
+              result = false;
+          }
+          return result;
+        }
+
+        function getFirmwareVersion(filename) {
+          var result = filename.substring(filename.lastIndexOf('v') + 1, filename.lastIndexOf('.hex'));
+          if (result.length == 1) {
+            result = '0' + result;
+          } else if (result.length == 3) {
+            result = result.substring(0, 2);
+          }
+          result = '0' + result.substring(0, 1) + '0' + result.substring(1, 2);
+          return result;
+        }
+
+        function getJsonFromLine(address, line) {
+          var tmp = '3a';
+          line = line.replace(/^\s+|\s+$/gm, '');
+          for (var i = 0; i < line.length; i++) {
+            var digit = parseInt(line[i], 16);
+            digit = digit < 0xA ? digit + 0x30 : digit + 0x37;
+            tmp = tmp + digit.toString(16);
+          }
+          return { addr: address.toString(16), data: tmp };
+        }
+      })();
+    </script>
+
+    <script>
+      (function () {
+        // Standalone MKR1000 bridge setup tool, embedded from Setup.html and wrapped in an
+        // IIFE so its own globals never touch this page's scope. Its data load is deferred
+        // until the Setup panel is actually opened (see wpmInitSetupPanel below), instead of
+        // running unconditionally at page load like the original standalone page did.
+        const s = document.getElementById('suSsid');
+        const pwd = document.getElementById('suPass');
+        const pwd2 = document.getElementById('suPass2');
+        const submitBtn = document.getElementById('suSubmitBtn');
+        const backBtn = document.getElementById('suBackBtn');
+        const errortext = document.getElementById('suErrorText');
+        const busNames = ['A', 'B', 'C', 'D'];
+        if (!s || !pwd || !submitBtn) return;
+        let initialized = false;
+
+        const busTable = document.getElementById('suBusTable');
+        for (let i = 0; i < 4; i++) {
+          const tr = document.createElement('tr');
+          const td1 = document.createElement('td');
+          const td2 = document.createElement('td');
+          const f = document.createElement('input');
+          f.type = 'number';
+          f.id = 'suF' + i;
+          f.setAttribute('max', '49');
+          f.setAttribute('min', '-49');
+          td1.appendChild(document.createTextNode(busNames[i]));
+          td2.appendChild(f);
+          tr.appendChild(td1);
+          tr.appendChild(td2);
+          busTable.appendChild(tr);
+        }
+        const fineA = document.getElementById('suF0');
+        const fineB = document.getElementById('suF1');
+        const fineC = document.getElementById('suF2');
+        const fineD = document.getElementById('suF3');
+
+        const midiTable = document.getElementById('suMidiTable');
+        for (let i = 1; i < 17; i++) {
+          const tr = document.createElement('tr');
+          const td1 = document.createElement('td');
+          const td2 = document.createElement('td');
+          const td3 = document.createElement('td');
+          const td4 = document.createElement('td');
+          const td5 = document.createElement('td');
+          const td6 = document.createElement('td');
+          const td7 = document.createElement('td');
+          const td8 = document.createElement('td');
+          const a = document.createElement('input'); a.type = 'checkbox'; a.id = 'suA' + i;
+          const b = document.createElement('input'); b.type = 'checkbox'; b.id = 'suB' + i;
+          const c = document.createElement('input'); c.type = 'checkbox'; c.id = 'suC' + i;
+          const d = document.createElement('input'); d.type = 'checkbox'; d.id = 'suD' + i;
+          const t = document.createElement('input'); t.type = 'number'; t.id = 'suT' + i;
+          t.setAttribute('max', '49'); t.setAttribute('min', '-49');
+          const p = document.createElement('input'); p.type = 'checkbox'; p.id = 'suP' + i;
+          const v = document.createElement('input'); v.type = 'checkbox'; v.id = 'suV' + i;
+          td1.appendChild(document.createTextNode(String(i)));
+          td2.appendChild(a); td3.appendChild(b); td4.appendChild(c); td5.appendChild(d);
+          td6.appendChild(t); td7.appendChild(p); td8.appendChild(v);
+          tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3); tr.appendChild(td4);
+          tr.appendChild(td5); tr.appendChild(td6); tr.appendChild(td7); tr.appendChild(td8);
+          midiTable.appendChild(tr);
+        }
+
+        submitBtn.addEventListener('click', submitOnClick);
+        if (backBtn) backBtn.addEventListener('click', function () { showPanel('scanPanel'); });
+
+        const deviceRadio = document.getElementById('suDevice');
+        const hostRadio = document.getElementById('suHost');
+        if (deviceRadio) deviceRadio.addEventListener('click', function () { disable252eClock(false); });
+        if (hostRadio) hostRadio.addEventListener('click', function () { disable252eClock(true); });
+
+        function send(path, method, content) {
+          const req = new XMLHttpRequest();
+          req.open(method, 'http://192.168.0.1/' + path, false);
+          req.send(content);
+          return req;
+        }
+
+        function disable252eClock(disable) {
+          const sendMidi = document.getElementById('suSendMidi');
+          const sendMidiLabel = document.getElementById('suSendMidiLabel');
+          sendMidi.disabled = disable;
+          sendMidiLabel.style.color = disable ? 'gray' : 'black';
+        }
+
+        function submitOnClick() {
+          if (pwd.value != pwd2.value) {
+            errortext.textContent = 'Passwords do not match.';
+            return;
+          }
+          if ((pwd.value.length < 8) || (pwd2.value.length < 8)) {
+            errortext.textContent = 'Password too short.';
+            return;
+          }
+          errortext.textContent = '';
+          const response = {
+            ssid: s.value,
+            password: pwd.value,
+            usbMode: document.getElementById('suDevice').checked ? '1' : '0',
+            poll: document.getElementById('suPoll').checked ? '1' : '0',
+            prgChEnbl: document.getElementById('suPrgChEnbl').checked ? '1' : '0',
+            sendMidi: document.getElementById('suSendMidi').checked ? '1' : '0',
+            buses: [
+              { bus: 'A', fine: fineA.value.toString() },
+              { bus: 'B', fine: fineB.value.toString() },
+              { bus: 'C', fine: fineC.value.toString() },
+              { bus: 'D', fine: fineD.value.toString() }
+            ],
+            channels: []
+          };
+
+          for (let i = 1; i < 17; i++) {
+            let m = 0;
+            if (document.getElementById('suA' + i).checked) m = 0x8;
+            if (document.getElementById('suB' + i).checked) m = m | 0x4;
+            if (document.getElementById('suC' + i).checked) m = m | 0x2;
+            if (document.getElementById('suD' + i).checked) m = m | 0x1;
+            response.channels.push({
+              chan: i.toString(),
+              mask: '0x' + m.toString(16),
+              tran: document.getElementById('suT' + i).value.toString(),
+              poly: document.getElementById('suP' + i).checked ? '1' : '0',
+              velo: document.getElementById('suV' + i).checked ? '1' : '0'
+            });
+          }
+
+          const responseString = JSON.stringify(response, undefined, 2);
+          const req = new XMLHttpRequest();
+          req.open('POST', 'http://192.168.0.1/postsetupdata', true);
+          req.setRequestHeader('Content-Length', responseString.length);
+          req.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+          req.send(responseString);
+        }
+
+        // Lazily loads the current setup data from the MKR1000 the first time the Setup panel
+        // is opened, instead of unconditionally at page load like the original standalone page.
+        function initSetupPanel() {
+          if (initialized) return;
+          initialized = true;
+          try {
+            let parsedJson = JSON.parse(send('getsetupdata1', 'GET', null).responseText);
+            s.value = parsedJson.ssid;
+            pwd.value = parsedJson.password;
+            pwd2.value = pwd.value;
+            if (parseInt(parsedJson.poll) == 1) document.getElementById('suPoll').checked = true;
+            if (parseInt(parsedJson.prgChEnbl) == 1) document.getElementById('suPrgChEnbl').checked = true;
+            if (parseInt(parsedJson.sendMidi) == 1) document.getElementById('suSendMidi').checked = true;
+            if (parseInt(parsedJson.usbMode) == 1) {
+              document.getElementById('suDevice').checked = true;
+              disable252eClock(false);
+            } else {
+              document.getElementById('suHost').checked = true;
+              disable252eClock(true);
+            }
+            for (let i = 0; i < 4; i++) {
+              document.getElementById('suF' + i).value = parseInt(parsedJson.buses[i].fine);
+            }
+
+            parsedJson = JSON.parse(send('getsetupdata2', 'GET', null).responseText);
+            for (let i = 0; i < 16; i++) {
+              const k = i + 1;
+              const mask = parseInt(parsedJson.channels[i].mask);
+              document.getElementById('suA' + k).checked = !!(mask & 0x8);
+              document.getElementById('suB' + k).checked = !!(mask & 0x4);
+              document.getElementById('suC' + k).checked = !!(mask & 0x2);
+              document.getElementById('suD' + k).checked = !!(mask & 0x1);
+              document.getElementById('suT' + k).value = parseInt(parsedJson.channels[i].tran);
+              document.getElementById('suP' + k).checked = !!parseInt(parsedJson.channels[i].poly);
+              document.getElementById('suV' + k).checked = !!parseInt(parsedJson.channels[i].velo);
+            }
+          } catch (error) {
+            errortext.textContent = 'Failed to load setup data from the MKR1000: ' + String(error && error.message ? error.message : error);
+            initialized = false;
+          }
+        }
+
+        window.wpmInitSetupPanel = initSetupPanel;
+      })();
+    </script>
+  </body>
+</html>

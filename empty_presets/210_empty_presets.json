@@ -1,0 +1,186 @@
+{
+  "module_address": "0x20",
+  "module_name": "210e",
+  "presets": [
+    {
+      "addr": "0000",
+      "data": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff000000000000000000000000000000000000000000000000000000000000000000000000000000000400200a20"
+    },
+    {
+      "addr": "0050",
+      "data": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000"
+    },
+    {
+      "addr": "0080",
+      "data": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "addr": "00a0",
+      "data": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "addr": "00f0",
+      "data": "ffffffffffffffffffffffffffffffff"
+    },
+    {
+      "addr": "0100",
+      "data": "ffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "addr": "0140",
+      "data": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff000000000000000000000000000000000000000000000000"
+    },
+    {
+      "addr": "0180",
+      "data": "00000000000000000000000000000000"
+    },
+    {
+      "addr": "0190",
+      "data": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "addr": "01e0",
+      "data": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    },
+    {
+      "addr": "0200",
+      "data": "ffffffffffffffff00000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "addr": "0230",
+      "data": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "addr": "0280",
+      "data": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "addr": "02d0",
+      "data": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000"
+    },
+    {
+      "addr": "0300",
+      "data": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "addr": "0320",
+      "data": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "addr": "0370",
+      "data": "ffffffffffffffffffffffffffffffff"
+    },
+    {
+      "addr": "0380",
+      "data": "ffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "addr": "03c0",
+      "data": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff000000000000000000000000000000000000000000000000"
+    },
+    {
+      "addr": "0400",
+      "data": "00000000000000000000000000000000"
+    },
+    {
+      "addr": "0410",
+      "data": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "addr": "0460",
+      "data": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    },
+    {
+      "addr": "0480",
+      "data": "ffffffffffffffff00000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "addr": "04b0",
+      "data": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "addr": "0500",
+      "data": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "addr": "0550",
+      "data": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000"
+    },
+    {
+      "addr": "0580",
+      "data": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "addr": "05a0",
+      "data": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "addr": "05f0",
+      "data": "ffffffffffffffffffffffffffffffff"
+    },
+    {
+      "addr": "0600",
+      "data": "ffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "addr": "0640",
+      "data": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff000000000000000000000000000000000000000000000000"
+    },
+    {
+      "addr": "0680",
+      "data": "00000000000000000000000000000000"
+    },
+    {
+      "addr": "0690",
+      "data": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "addr": "06e0",
+      "data": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    },
+    {
+      "addr": "0700",
+      "data": "ffffffffffffffff00000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "addr": "0730",
+      "data": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "addr": "0780",
+      "data": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "addr": "07d0",
+      "data": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000"
+    },
+    {
+      "addr": "0800",
+      "data": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "addr": "0820",
+      "data": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "addr": "0870",
+      "data": "ffffffffffffffffffffffffffffffff"
+    },
+    {
+      "addr": "0880",
+      "data": "ffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "addr": "08c0",
+      "data": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff000000000000000000000000000000000000000000000000"
+    },
+    {
+      "addr": "0900",
+      "data": "00000000000000000000000000000000"
+    },
+    {
+      "addr": "0910",
+      "data": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff000000000000000000000000000000000000000000000000000000000000000000000000000000000400200a20"
+    }
+  ]
+}
