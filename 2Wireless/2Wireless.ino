@@ -1070,9 +1070,15 @@ void loop() {
     DEBUG_PRINTLN("new client");           // print a message out the serial port
     String currentLine = "";                // make a String to hold incoming data from the client
     String urlString = "";                  // string to hold the request URL
+    unsigned long requestStartedAt = millis();
     while (client.connected()) {            // loop while the client's connected
+      if (millis() - requestStartedAt > 5000) {
+        DEBUG_PRINTLN("Request timed out, dropping client");
+        break;
+      }
       if (client.available()) {             // if there's bytes to read from the client,
         char c = client.read();             // read a byte, then
+        requestStartedAt = millis();
         //SerialDebug.write(c);                    // print it out the serial monitor
         if (c == '\n') {                    // if the byte is a newline character
           // if the current line is blank, you got two newline characters in a row.
@@ -1636,22 +1642,22 @@ void requestEvent() {
     readTime = millis(); 
 }
 
-void switchToMaster(){
+bool switchToMaster(){
   delayMicroseconds(50); //might help
   Wire.end();
-  //Wire.begin sets bus to idle. Make sure bus is actually idle first.
   pinMode(SCL_PIN, INPUT);
   pinMode(SDA_PIN, INPUT);
-  int start_time = micros();
-  int idle_time = 0;
-  while (idle_time < 50) {
-    //Each clock cycle is about 10uS. These digitalRead calls take a few uS each.
+  unsigned long waitStartedAt = micros();
+  unsigned long idleStartedAt = micros();
+  while (micros() - waitStartedAt < 50000UL) {
     if ((digitalRead(SCL_PIN) == LOW) || (digitalRead(SDA_PIN) == LOW)) {
-      start_time = micros();
+      idleStartedAt = micros();
+    } else if (micros() - idleStartedAt >= 50) {
+      Wire.begin();
+      return true;
     }
-    idle_time = micros() - start_time;
   }
-  Wire.begin();
+  return false;
 }
 
 void switchToSlave(){
@@ -1719,7 +1725,10 @@ void sendQuery(byte address) {
     if (v2version) {
         //Nothing. Query is not supported
     } else {
-        switchToMaster();
+        if (!switchToMaster()) {
+          switchToSlave();
+          return;
+        }
         Wire.beginTransmission(0);
         Wire.write(0x04);
         Wire.write(address);
@@ -2011,9 +2020,10 @@ void sendMidiBend(byte mask, byte bend_lsb, byte bend_msb){
 int masterBeginTransmission(int addr){
   i2c_guard = true; //prevent slave interrupt
   int result = 0;
-  while (sercom2.isBusBusyWIRE()) {   
-  }
-  if (SERCOM2->I2CM.STATUS.bit.BUSERR) {
+  if (!switchToMaster()) {
+    result = 1;
+    switchToSlave();
+  } else if (SERCOM2->I2CM.STATUS.bit.BUSERR) {
     DEBUG_I2C_PRINTLN("I2C BUS PROBLEM BEFORE beginTransmission");
     DEBUG_I2C_PRINT("->BUSSTATE:");
     DEBUG_I2C_PRINT(SERCOM2->I2CM.STATUS.bit.BUSSTATE);
@@ -2041,7 +2051,6 @@ int masterBeginTransmission(int addr){
     DEBUG_I2C_PRINTLN(SERCOM2->I2CM.INTFLAG.bit.MB);
     result = 1;
   } else {
-    switchToMaster();
     Wire.beginTransmission(addr);
   }
   i2c_guard = false;
@@ -2063,7 +2072,13 @@ void masterEndTransmission() {
       //Too late to cancel already pending beginTransmission.
       DEBUG_I2C_PRINTLN("I2C BUS IS BUSY AFTER beginTransmission");
     } 
-    while (sercom2.isBusBusyWIRE()) {       
+    unsigned long busyStartedAt = micros();
+    while (sercom2.isBusBusyWIRE() && (micros() - busyStartedAt < 50000UL)) {
+    }
+    if (sercom2.isBusBusyWIRE()) {
+      switchToSlave();
+      i2c_guard = false;
+      return;
     }
     //1 here is supposed to cause the master to stop after sending.
     //Not sure it helps.
