@@ -1749,7 +1749,7 @@ void requestEvent() {
     readTime = millis(); 
 }
 
-void switchToMaster(){
+bool switchToMaster(){
   delayMicroseconds(50); //might help
   Wire.end();
   //Wire.begin sets bus to idle. Make sure bus is actually idle first.
@@ -1757,7 +1757,8 @@ void switchToMaster(){
   pinMode(SDA_PIN, INPUT);
   int start_time = micros();
   int idle_time = 0;
-  while (idle_time < 50) {
+  const unsigned long waitStartedAt = micros();
+  while (idle_time < 50 && (micros() - waitStartedAt) < 2000UL) {
     //Each clock cycle is about 10uS. These digitalRead calls take a few uS each.
     if ((digitalRead(SCL_PIN) == LOW) || (digitalRead(SDA_PIN) == LOW)) {
       start_time = micros();
@@ -1765,6 +1766,7 @@ void switchToMaster(){
     idle_time = micros() - start_time;
   }
   Wire.begin();
+  return idle_time >= 50;
 }
 
 void switchToSlave(){
@@ -1779,7 +1781,10 @@ void switchToSlave(){
 void enterMidiClockMasterMode() {
   if (midiClockMasterMode) return;
   i2c_guard = true;
-  switchToMaster();
+  if (!switchToMaster()) {
+    i2c_guard = false;
+    return;
+  }
   midiClockMasterMode = true;
   i2c_guard = false;
 }
@@ -1795,6 +1800,7 @@ void leaveMidiClockMasterMode() {
 bool sendMidiClockBusMessage(uint8_t statusByte) {
   if (v2version) return false;
   enterMidiClockMasterMode();
+  if (!midiClockMasterMode) return false;
   clockBusTransmission = true;
   Wire.beginTransmission(0);
   Wire.write(0x08);
@@ -1881,7 +1887,7 @@ void sendQuery(byte address) {
     if (v2version) {
         //Nothing. Query is not supported
     } else {
-        switchToMaster();
+      if (!switchToMaster()) return;
         Wire.beginTransmission(0);
         Wire.write(0x04);
         Wire.write(address);
@@ -2152,7 +2158,10 @@ int masterBeginTransmission(int addr){
     DEBUG_I2C_PRINTLN(SERCOM2->I2CM.INTFLAG.bit.MB);
     result = 1;
   } else {
-    switchToMaster();
+    if (!switchToMaster()) {
+      i2c_guard = false;
+      return 1;
+    }
     Wire.beginTransmission(addr);
   }
   i2c_guard = false;

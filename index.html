@@ -3537,7 +3537,7 @@
       function pingMKR1000(onConnected) {
         showPairingOverlay('Pinging MKR1000...');
         const xhr = new XMLHttpRequest();
-        const pingUrl = MKR1000_BASE_URL + '/midiclockstatus?ping=' + Date.now();
+        const pingUrl = MKR1000_BASE_URL + '/midiclockstatus';
         let settled = false;
         appendPairingLog('Ping started: GET ' + pingUrl);
         function retry() {
